@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FTP Mirror</string>
+    <string name="select_folder">Select Mirror Folder</string>
+    <string name="save_schedule">Save &amp; Schedule</string>
+    <string name="run_now">Run Now</string>
+    <string name="host">FTP Host</string>
+    <string name="port">Port</string>
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+    <string name="remote_dir">Remote Directory</string>
+    <string name="delete_after">Delete local file after successful upload</string>
+</resources>
