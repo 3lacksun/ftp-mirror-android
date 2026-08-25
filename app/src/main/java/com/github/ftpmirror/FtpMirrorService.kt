@@ -111,8 +111,15 @@ class FtpMirrorService(private val context: Context) {
             return
         }
 
-        context.contentResolver.openInputStream(docFile.uri)?.use { input: InputStream ->
-            if (client.storeFile(name, input)) {
+        val inputStream = context.contentResolver.openInputStream(docFile.uri)
+        if (inputStream == null) {
+            Log.e(tag, "Could not open input stream for $name")
+            return
+        }
+
+        inputStream.use { input: InputStream ->
+            val success = client.storeFile(name, input)
+            if (success) {
                 Log.i(tag, "Successfully uploaded: $name")
                 if (deleteAfter) {
                     docFile.delete()
@@ -120,6 +127,6 @@ class FtpMirrorService(private val context: Context) {
             } else {
                 Log.e(tag, "Upload failed for: $name (reply: ${client.replyString})")
             }
-        } ?: Log.e(tag, "Could not open input stream for $name")
+        }
     }
 }
