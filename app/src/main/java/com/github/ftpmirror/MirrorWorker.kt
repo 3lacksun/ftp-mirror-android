@@ -15,7 +15,6 @@ class MirrorWorker(
 
     override suspend fun doWork(): Result {
         return try {
-            // Launch foreground service so the mirror can run under a visible notification
             val intent = Intent(applicationContext, MirrorForegroundService::class.java)
             ContextCompat.startForegroundService(applicationContext, intent)
             Result.success()
@@ -26,7 +25,9 @@ class MirrorWorker(
 
     companion object {
         fun enqueueOneTime(context: Context) {
-            val request = OneTimeWorkRequestBuilder<MirrorWorker>().build()
+            val request = OneTimeWorkRequestBuilder<MirrorWorker>()
+                .addTag("ftp_mirror_one_time")
+                .build()
             WorkManager.getInstance(context).enqueue(request)
         }
     }
