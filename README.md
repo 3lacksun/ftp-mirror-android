@@ -2,7 +2,15 @@
 
 **Commercial-grade native Android app for scheduled one-way FTP mirroring.**
 
-Version **2.2.0**
+Version **2.3.0**
+
+### UI / UX
+- Full Material 3 design system (light + dark)
+- Polished PIN / biometric unlock screen
+- Hero status card + quick actions
+- Sectioned settings (folder, server, filters, options)
+- Outlined cards, tonal buttons, consistent 16dp radius
+- Clear empty states and hierarchy
 
 ### Features
 - 6-digit PIN + optional biometric unlock
@@ -10,25 +18,14 @@ Version **2.2.0**
 - Status dashboard + transfer history
 - Configurable schedule (15 min → daily)
 - Include / exclude file patterns
-- **Passive / Active mode toggle**
-- **Connection diagnostics** (DNS, reply codes, clear error messages)
+- Passive / Active mode toggle
+- Connection diagnostics
 - Cancel running job
 - WorkManager + network constraints
 - Recursive mirror + delete-after-upload
-- Material 3 UI with toolbar
-
-### Connection tips
-- Prefer **Passive mode** on mobile networks.
-- Use IP if DNS fails.
-- Test Connection before scheduling.
-- Classic FTP is cleartext — only use on trusted networks. FTPS can be added later.
 
 ### Build
-Open in Android Studio or:
-```bash
-./gradlew assembleDebug
-```
-APK also available from GitHub Actions Artifacts.
+Open in Android Studio or run GitHub Actions and download the APK from Artifacts.
 
 ## License
 MIT © 2026
