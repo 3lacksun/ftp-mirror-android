@@ -21,7 +21,8 @@ class FtpMirrorService(private val context: Context) {
         }
 
         val treeUri = Uri.parse(treeUriString)
-        val rootDoc = DocumentFile.fromTreeUri(context, treeUri) ?: run {
+        val rootDoc = DocumentFile.fromTreeUri(context, treeUri)
+        if (rootDoc == null) {
             Log.e(tag, "Invalid tree URI")
             return
         }
@@ -35,14 +36,14 @@ class FtpMirrorService(private val context: Context) {
 
         Log.i(tag, "Starting mirror from ${rootDoc.name} to $remoteBase")
 
-        val client = FTPClient().apply {
-            connectTimeout = 30000
-            defaultTimeout = 30000
-        }
+        val client = FTPClient()
+        client.connectTimeout = 30000
+        client.defaultTimeout = 30000
 
         try {
             client.connect(host, port)
-            if (!client.login(username, password)) {
+            val loggedIn = client.login(username, password)
+            if (!loggedIn) {
                 Log.e(tag, "FTP login failed")
                 return
             }
@@ -77,11 +78,20 @@ class FtpMirrorService(private val context: Context) {
         client.changeWorkingDirectory(path)
     }
 
-    private fun syncDocumentFile(doc: DocumentFile, client: FTPClient, remoteBase: String, deleteAfter: Boolean) {
+    private fun syncDocumentFile(
+        doc: DocumentFile,
+        client: FTPClient,
+        remoteBase: String,
+        deleteAfter: Boolean
+    ) {
         val files = doc.listFiles() ?: return
         for (file in files) {
             val name = file.name ?: continue
-            val remotePath = if (remoteBase.endsWith("/")) "$remoteBase$name" else "$remoteBase/$name"
+            val remotePath = if (remoteBase.endsWith("/")) {
+                "$remoteBase$name"
+            } else {
+                "$remoteBase/$name"
+            }
 
             if (file.isDirectory) {
                 client.makeDirectory(remotePath)
@@ -92,11 +102,16 @@ class FtpMirrorService(private val context: Context) {
         }
     }
 
-    private fun uploadDocumentFile(docFile: DocumentFile, client: FTPClient, remoteBase: String, deleteAfter: Boolean) {
+    private fun uploadDocumentFile(
+        docFile: DocumentFile,
+        client: FTPClient,
+        remoteBase: String,
+        deleteAfter: Boolean
+    ) {
         val name = docFile.name ?: return
 
-        // Change to correct directory before checking/uploading
-        if (!client.changeWorkingDirectory(remoteBase)) {
+        val cwdOk = client.changeWorkingDirectory(remoteBase)
+        if (!cwdOk) {
             Log.w(tag, "Could not CWD to $remoteBase, attempting make")
             client.makeDirectory(remoteBase)
             client.changeWorkingDirectory(remoteBase)
@@ -111,14 +126,14 @@ class FtpMirrorService(private val context: Context) {
             return
         }
 
-        val inputStream = context.contentResolver.openInputStream(docFile.uri)
+        val inputStream: InputStream? = context.contentResolver.openInputStream(docFile.uri)
         if (inputStream == null) {
             Log.e(tag, "Could not open input stream for $name")
             return
         }
 
-        inputStream.use { input: InputStream ->
-            val success = client.storeFile(name, input)
+        try {
+            val success = client.storeFile(name, inputStream)
             if (success) {
                 Log.i(tag, "Successfully uploaded: $name")
                 if (deleteAfter) {
@@ -126,6 +141,12 @@ class FtpMirrorService(private val context: Context) {
                 }
             } else {
                 Log.e(tag, "Upload failed for: $name (reply: ${client.replyString})")
+            }
+        } finally {
+            try {
+                inputStream.close()
+            } catch (e: Exception) {
+                // ignore
             }
         }
     }
