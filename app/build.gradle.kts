@@ -11,8 +11,8 @@ android {
         applicationId = "com.github.ftpmirror"
         minSdk = 24
         targetSdk = 34
-        versionCode = 3
-        versionName = "2.1.0"
+        versionCode = 4
+        versionName = "2.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -29,9 +29,6 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-    buildFeatures {
-        viewBinding = false
-    }
 }
 
 dependencies {
@@ -44,7 +41,4 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("androidx.biometric:biometric:1.1.0")
-    testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
 }
