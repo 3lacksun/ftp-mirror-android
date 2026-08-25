@@ -1,56 +1,109 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="32dp">
+    android:fillViewport="true"
+    android:background="@color/md_theme_surface">
 
-    <TextView
-        android:id="@+id/tvTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Enter 6-Digit PIN"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="24dp" />
-
-    <EditText
-        android:id="@+id/etPin1"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="PIN"
-        android:inputType="numberPassword"
-        android:maxLength="6"
-        android:gravity="center"
-        android:textSize="22sp"
-        android:layout_marginBottom="12dp" />
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:paddingHorizontal="28dp"
+        android:paddingTop="72dp"
+        android:paddingBottom="32dp">
 
-    <EditText
-        android:id="@+id/etPin2"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Confirm PIN"
-        android:inputType="numberPassword"
-        android:maxLength="6"
-        android:gravity="center"
-        android:textSize="22sp"
-        android:visibility="gone"
-        android:layout_marginBottom="24dp" />
+        <FrameLayout
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:background="@drawable/bg_icon_circle"
+            android:layout_marginBottom="28dp">
+            <ImageView
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_lock"
+                android:contentDescription="@null" />
+        </FrameLayout>
 
-    <Button
-        android:id="@+id/btnConfirm"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Confirm"
-        android:layout_marginBottom="12dp" />
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/pin_enter_title"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="@color/md_theme_on_surface"
+            android:gravity="center"
+            android:layout_marginBottom="8dp" />
 
-    <Button
-        android:id="@+id/btnBiometric"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/use_biometric"
-        android:visibility="gone"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+        <TextView
+            android:id="@+id/tvSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/pin_enter_subtitle"
+            android:textSize="15sp"
+            android:textColor="@color/md_theme_on_surface_variant"
+            android:gravity="center"
+            android:layout_marginBottom="36dp" />
 
-</LinearLayout>
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:hint="PIN"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPin1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberPassword"
+                android:maxLength="6"
+                android:gravity="center"
+                android:textSize="22sp"
+                android:letterSpacing="0.3" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilPin2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="28dp"
+            android:hint="@string/pin_confirm_hint"
+            android:visibility="gone"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPin2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberPassword"
+                android:maxLength="6"
+                android:gravity="center"
+                android:textSize="22sp"
+                android:letterSpacing="0.3" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnConfirm"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="@string/continue_btn"
+            android:textSize="16sp"
+            app:cornerRadius="16dp"
+            android:layout_marginBottom="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBiometric"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="@string/use_biometric"
+            android:visibility="gone"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            app:cornerRadius="16dp"
+            app:icon="@drawable/ic_fingerprint"
+            app:iconGravity="textStart" />
+
+    </LinearLayout>
+</ScrollView>

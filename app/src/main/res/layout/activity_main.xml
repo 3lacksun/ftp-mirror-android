@@ -10,161 +10,387 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/md_theme_primary"
-        app:title="FTP Mirror"
-        app:titleTextColor="@color/md_theme_on_primary" />
+        android:background="@color/md_theme_surface"
+        app:title="@string/app_name"
+        app:titleTextColor="@color/md_theme_on_surface"
+        app:titleCentered="false" />
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:clipToPadding="false">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="24dp">
 
-            <!-- STATUS -->
+            <!-- HERO STATUS -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/md_theme_primary_container"
+                app:cardElevation="0dp"
+                app:cardCornerRadius="20dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/section_status"
+                        android:textAllCaps="true"
+                        android:textSize="11sp"
+                        android:letterSpacing="0.08"
+                        android:textColor="@color/md_theme_on_primary_container"
+                        android:alpha="0.7"
+                        android:layout_marginBottom="6dp" />
+                    <TextView
+                        android:id="@+id/tvStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/status_idle"
+                        android:textSize="26sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/md_theme_on_primary_container"
+                        android:layout_marginBottom="8dp" />
+                    <TextView
+                        android:id="@+id/tvLastRun"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Last run: Never"
+                        android:textSize="13sp"
+                        android:textColor="@color/md_theme_on_primary_container"
+                        android:alpha="0.8"
+                        android:layout_marginBottom="4dp" />
+                    <TextView
+                        android:id="@+id/tvStats"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Uploaded: 0  ·  Failed: 0  ·  Skipped: 0"
+                        android:textSize="13sp"
+                        android:textColor="@color/md_theme_on_primary_container"
+                        android:alpha="0.8" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- QUICK ACTIONS -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRunNow"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:text="@string/run_now"
+                    android:layout_marginEnd="6dp"
+                    app:cornerRadius="14dp"
+                    app:icon="@drawable/ic_upload"
+                    app:iconGravity="textStart" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCancel"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:text="@string/cancel_run"
+                    android:layout_marginStart="6dp"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    app:cornerRadius="14dp" />
+            </LinearLayout>
+
+            <!-- HISTORY -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
                 app:cardBackgroundColor="@color/md_theme_card"
-                app:cardElevation="1dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/md_theme_surface_variant"
                 app:cardCornerRadius="16dp">
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="vertical" android:padding="16dp">
-                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:text="Status" android:textStyle="bold" android:textSize="14sp"
-                        android:textColor="@color/md_theme_outline" android:layout_marginBottom="6dp" />
-                    <TextView android:id="@+id/tvStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:text="Idle" android:textSize="18sp" android:textStyle="bold" android:layout_marginBottom="4dp" />
-                    <TextView android:id="@+id/tvLastRun" android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:text="Last run: Never" android:textSize="13sp" android:textColor="@color/md_theme_outline" android:layout_marginBottom="2dp" />
-                    <TextView android:id="@+id/tvStats" android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:text="Uploaded: 0  ·  Failed: 0  ·  Skipped: 0" android:textSize="13sp" android:layout_marginBottom="10dp" />
-                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:text="Recent history" android:textStyle="bold" android:textSize="12sp"
-                        android:textColor="@color/md_theme_outline" android:layout_marginBottom="4dp" />
-                    <TextView android:id="@+id/tvHistory" android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:text="No history yet" android:textSize="12sp" android:fontFamily="monospace" android:lineSpacingExtra="2dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/history_title"
+                        android:textStyle="bold"
+                        android:textSize="15sp"
+                        android:textColor="@color/md_theme_on_surface"
+                        android:layout_marginBottom="10dp" />
+                    <TextView
+                        android:id="@+id/tvHistory"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/no_history"
+                        android:textSize="13sp"
+                        android:lineSpacingExtra="4dp"
+                        android:textColor="@color/md_theme_on_surface_variant"
+                        android:fontFamily="monospace" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- FOLDER -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/section_folder"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:textColor="@color/md_theme_outline"
+                android:layout_marginBottom="8dp"
+                android:layout_marginStart="4dp" />
+
             <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp" app:cardBackgroundColor="@color/md_theme_card"
-                app:cardElevation="1dp" app:cardCornerRadius="16dp">
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="vertical" android:padding="16dp">
-                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:text="Mirror folder" android:textStyle="bold" android:textSize="14sp"
-                        android:textColor="@color/md_theme_outline" android:layout_marginBottom="6dp" />
-                    <TextView android:id="@+id/tvCurrentFolder" android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:text="No folder selected" android:textSize="15sp" android:layout_marginBottom="12dp" />
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/md_theme_card"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/md_theme_surface_variant"
+                app:cardCornerRadius="16dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_folder"
+                            android:layout_marginEnd="12dp"
+                            android:contentDescription="@null" />
+                        <TextView
+                            android:id="@+id/tvCurrentFolder"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/no_folder"
+                            android:textSize="15sp"
+                            android:textColor="@color/md_theme_on_surface" />
+                    </LinearLayout>
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnSelectFolder" android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:text="@string/select_folder" style="@style/Widget.Material3.Button.OutlinedButton" />
+                        android:id="@+id/btnSelectFolder"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/select_folder"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        app:cornerRadius="12dp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- SERVER -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp" app:cardBackgroundColor="@color/md_theme_card"
-                app:cardElevation="1dp" app:cardCornerRadius="16dp">
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="vertical" android:padding="16dp">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/section_server"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:textColor="@color/md_theme_outline"
+                android:layout_marginBottom="8dp"
+                android:layout_marginStart="4dp" />
 
-                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:text="FTP server" android:textStyle="bold" android:textSize="14sp"
-                        android:textColor="@color/md_theme_outline" android:layout_marginBottom="12dp" />
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/md_theme_card"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/md_theme_surface_variant"
+                app:cardCornerRadius="16dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp" android:hint="@string/host" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                        android:layout_marginBottom="10dp" android:hint="@string/host"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etHost" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textUri" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp" android:hint="@string/port" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                        android:layout_marginBottom="10dp" android:hint="@string/port"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etPort" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number" android:text="21" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp" android:hint="@string/username" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                        android:layout_marginBottom="10dp" android:hint="@string/username"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etUser" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="text" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp" android:hint="@string/password" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                        android:layout_marginBottom="10dp" android:hint="@string/password"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etPass" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textPassword" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp" android:hint="@string/remote_dir" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                        android:layout_marginBottom="12dp" android:hint="@string/remote_dir"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etRemoteDir" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="text" android:text="/mirror" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp" android:hint="@string/include_patterns" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etInclude" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="text" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:layout_marginBottom="12dp" android:hint="@string/exclude_patterns" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etExclude" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="text" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/switchPassive" android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:text="@string/passive_mode" android:checked="true" android:layout_marginBottom="8dp" />
-
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/switchDelete" android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:text="@string/delete_after" android:checked="true" android:layout_marginBottom="12dp" />
-
-                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:text="@string/interval" android:textSize="13sp" android:textColor="@color/md_theme_outline" android:layout_marginBottom="4dp" />
-                    <Spinner android:id="@+id/spinnerInterval" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="16dp" />
-
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnTest" android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:text="@string/test_connection" style="@style/Widget.Material3.Button.TonalButton" android:layout_marginBottom="8dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnSave" android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:text="@string/save_schedule" android:layout_marginBottom="8dp" />
-
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnRunNow" android:layout_width="0dp" android:layout_height="wrap_content"
-                            android:layout_weight="1" android:text="@string/run_now" android:layout_marginEnd="6dp" />
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnCancel" android:layout_width="0dp" android:layout_height="wrap_content"
-                            android:layout_weight="1" android:text="@string/cancel_run" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_marginStart="6dp" />
-                    </LinearLayout>
+                        android:id="@+id/btnTest"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/test_connection"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        app:cornerRadius="12dp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="v2.2.0" android:gravity="center" android:textSize="11sp"
-                android:textColor="@color/md_theme_outline" android:layout_marginTop="4dp" android:layout_marginBottom="16dp" />
+            <!-- FILTERS -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/section_filters"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:textColor="@color/md_theme_outline"
+                android:layout_marginBottom="8dp"
+                android:layout_marginStart="4dp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/md_theme_card"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/md_theme_surface_variant"
+                app:cardCornerRadius="16dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp" android:hint="@string/include_patterns"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etInclude" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="text" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:hint="@string/exclude_patterns"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etExclude" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="text" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- OPTIONS -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/section_options"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:textColor="@color/md_theme_outline"
+                android:layout_marginBottom="8dp"
+                android:layout_marginStart="4dp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/md_theme_card"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/md_theme_surface_variant"
+                app:cardCornerRadius="16dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switchPassive"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/passive_mode"
+                        android:checked="true"
+                        android:layout_marginBottom="8dp" />
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switchDelete"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/delete_after"
+                        android:checked="true"
+                        android:layout_marginBottom="16dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/interval"
+                        android:textSize="13sp"
+                        android:textColor="@color/md_theme_on_surface_variant"
+                        android:layout_marginBottom="6dp" />
+                    <Spinner
+                        android:id="@+id/spinnerInterval"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginBottom="16dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSave"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:text="@string/save_schedule"
+                        app:cornerRadius="14dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="FTP Mirror 2.3.0"
+                android:gravity="center"
+                android:textSize="11sp"
+                android:textColor="@color/md_theme_outline"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="8dp" />
 
         </LinearLayout>
     </ScrollView>

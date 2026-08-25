@@ -11,9 +11,8 @@ android {
         applicationId = "com.github.ftpmirror"
         minSdk = 24
         targetSdk = 34
-        versionCode = 4
-        versionName = "2.2.0"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        versionCode = 5
+        versionName = "2.3.0"
     }
 
     buildTypes {
@@ -41,4 +40,5 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("androidx.biometric:biometric:1.1.0")
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 }
