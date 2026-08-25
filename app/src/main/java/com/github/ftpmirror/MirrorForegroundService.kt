@@ -20,20 +20,20 @@ class MirrorForegroundService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(notificationId, buildNotification("Starting FTP mirror..."))
+        startForeground(notificationId, buildNotification("Starting FTP mirror…"))
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                updateNotification("Mirroring files to FTP...")
-                FtpMirrorService(this@MirrorForegroundService).performMirror()
-                updateNotification("Mirror completed")
+                updateNotification("Connecting and uploading files…")
+                val result = FtpMirrorService(this@MirrorForegroundService).performMirror()
+                val summary = "Done — uploaded ${result.uploaded}, failed ${result.failed}, skipped ${result.skipped}"
+                updateNotification(summary)
             } catch (e: Exception) {
-                updateNotification("Mirror failed: ${e.message?.take(40) ?: "error"}")
+                updateNotification("Mirror failed: ${e.message?.take(50) ?: "error"}")
             } finally {
-                // Give the user a moment to see the final status
-                kotlinx.coroutines.delay(2500)
+                kotlinx.coroutines.delay(4000)
                 stopSelf()
             }
         }
@@ -49,8 +49,7 @@ class MirrorForegroundService : Service() {
             ).apply {
                 description = "Background FTP file mirroring"
             }
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(channel)
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
     }
 
@@ -61,12 +60,13 @@ class MirrorForegroundService : Service() {
             .setSmallIcon(android.R.drawable.stat_sys_upload)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .build()
     }
 
     private fun updateNotification(text: String) {
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.notify(notificationId, buildNotification(text))
+        getSystemService(NotificationManager::class.java)
+            .notify(notificationId, buildNotification(text))
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

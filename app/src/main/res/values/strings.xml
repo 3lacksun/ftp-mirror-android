@@ -4,10 +4,24 @@
     <string name="select_folder">Select Mirror Folder</string>
     <string name="save_schedule">Save &amp; Schedule</string>
     <string name="run_now">Run Now</string>
+    <string name="test_connection">Test Connection</string>
     <string name="host">FTP Host</string>
     <string name="port">Port</string>
     <string name="username">Username</string>
     <string name="password">Password</string>
     <string name="remote_dir">Remote Directory</string>
     <string name="delete_after">Delete local file after successful upload</string>
+    <string name="interval">Schedule interval</string>
+    <string name="status_idle">Idle</string>
+    <string name="status_running">Running…</string>
+    <string name="last_run_never">Never run</string>
+    <string-array name="interval_labels">
+        <item>Every 15 minutes</item>
+        <item>Every 30 minutes</item>
+        <item>Every 1 hour</item>
+        <item>Every 2 hours</item>
+        <item>Every 6 hours</item>
+        <item>Every 12 hours</item>
+        <item>Daily</item>
+    </string-array>
 </resources>

@@ -5,56 +5,48 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Build](https://github.com/3lacksun/ftp-mirror-android/actions/workflows/build.yml/badge.svg)](https://github.com/3lacksun/ftp-mirror-android/actions/workflows/build.yml)
 
-**Native Android APK for scheduled one-way FTP file mirroring with PIN protection and folder picker.**
+**Commercial-grade native Android APK for scheduled one-way FTP file mirroring.**
+
+Version **2.0.0**
 
 ### Features
-- 6-digit PIN set on first launch (required every launch)
-- Storage Access Framework folder picker (any folder)
-- Background scheduled mirroring via WorkManager (default every 15 min)
-- Recursive mirroring with automatic remote directory creation
-- Optional "delete after successful upload"
-- Foreground service with notification
-- aarch64 / arm64-v8a compatible (minSdk 24)
+- 6-digit PIN protection (required on every launch)
+- Storage Access Framework folder picker with persistable permissions
+- **Encrypted credential storage** (EncryptedSharedPreferences)
+- Status dashboard (last run, uploaded / failed / skipped counts)
+- Configurable schedule interval (15 min → daily)
+- Connection test button
+- Background scheduling via WorkManager with network constraints
+- Recursive mirroring + automatic remote directory creation
+- Optional delete-after-successful-upload
+- Foreground service with detailed notifications
+- Material 3 UI
 
-### Quick Start (recommended)
-
-**Option A – Android Studio (easiest)**
-1. Clone the repo
-2. Open the project in Android Studio
-3. Let it sync Gradle (it will download the wrapper automatically)
-4. Build → Build Bundle(s) / APK(s) → Build APK(s)
-
-**Option B – Command line**
+### Build
 ```bash
 git clone https://github.com/3lacksun/ftp-mirror-android.git
 cd ftp-mirror-android
-
-# Generate the Gradle wrapper (one-time)
+# Open in Android Studio (recommended) or:
 gradle wrapper --gradle-version 8.7
-
-# Build
 ./gradlew assembleDebug
 ```
-APK location: `app/build/outputs/apk/debug/app-debug.apk`
 
-**Option C – Download the APK from Actions**
-Every push runs a GitHub Action that builds the debug APK.  
-Go to the **Actions** tab → latest successful workflow → Artifacts → download `app-debug`.
+APK is also produced automatically by GitHub Actions (Artifacts tab).
 
 ### Usage
-1. Install and open → set 6-digit PIN on first run.
-2. Enter PIN on every launch.
-3. Tap **Select Mirror Folder** and choose a directory.
-4. Enter FTP details → **Save & Schedule**.
-5. Add files to the selected folder — they will be mirrored automatically.
+1. Open app → set 6-digit PIN on first launch.
+2. Enter PIN on every subsequent launch.
+3. Select a mirror folder.
+4. Enter FTP details, choose interval, optionally Test Connection.
+5. Tap **Save & Schedule**.
+6. Use **Run Now** for an immediate mirror.
 
-**To reset PIN**: Clear app data in Android Settings → Apps → FTP Mirror → Storage → Clear data.
+**Reset PIN**: Android Settings → Apps → FTP Mirror → Storage → Clear data.
 
 ### Notes
-- Uses Apache Commons Net for FTP (passive mode, binary).
-- SAF + persistable URI permissions — no legacy storage permissions needed.
-- Cleartext traffic allowed (typical for FTP). For FTPS/SFTP further work is required.
-- Icons are system placeholders; replace with proper adaptive icons for production.
+- Uses Apache Commons Net (passive mode, binary).
+- Cleartext traffic allowed (typical for classic FTP). FTPS can be added later.
+- Icons are system placeholders — replace with proper adaptive icons for store release.
 
 ## License
 MIT © 2026
