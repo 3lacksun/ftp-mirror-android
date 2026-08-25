@@ -1,42 +1,34 @@
 # FTP Mirror Android
 
-**Commercial-grade native Android APK for scheduled one-way FTP file mirroring.**
+**Commercial-grade native Android app for scheduled one-way FTP mirroring.**
 
-Version **2.1.0**
+Version **2.2.0**
 
 ### Features
-- 6-digit PIN + optional **biometric unlock** (fingerprint / face)
-- Storage Access Framework folder picker with persistable permissions
-- **Encrypted credential storage** (EncryptedSharedPreferences)
-- Status dashboard (last run, counters, recent history)
+- 6-digit PIN + optional biometric unlock
+- Encrypted credential storage
+- Status dashboard + transfer history
 - Configurable schedule (15 min → daily)
-- **Include / exclude file patterns** (e.g. `*.jpg,*.pdf`)
-- Connection test
+- Include / exclude file patterns
+- **Passive / Active mode toggle**
+- **Connection diagnostics** (DNS, reply codes, clear error messages)
 - Cancel running job
-- Background scheduling via WorkManager + network constraints
-- Recursive mirroring + automatic remote directory creation
-- Optional delete-after-successful-upload
-- Foreground service with detailed notifications
-- Material 3 UI
+- WorkManager + network constraints
+- Recursive mirror + delete-after-upload
+- Material 3 UI with toolbar
+
+### Connection tips
+- Prefer **Passive mode** on mobile networks.
+- Use IP if DNS fails.
+- Test Connection before scheduling.
+- Classic FTP is cleartext — only use on trusted networks. FTPS can be added later.
 
 ### Build
+Open in Android Studio or:
 ```bash
-git clone https://github.com/3lacksun/ftp-mirror-android.git
-cd ftp-mirror-android
-# Open in Android Studio (recommended)
 ./gradlew assembleDebug
 ```
-
-APK is produced automatically by GitHub Actions (Artifacts tab).
-
-### Usage
-1. Open → set 6-digit PIN (biometric available on subsequent launches).
-2. Select mirror folder.
-3. Enter FTP details, optional include/exclude patterns, choose interval.
-4. Test Connection → Save & Schedule.
-5. Run Now or wait for the schedule. Use Cancel if needed.
-
-**Reset PIN**: Android Settings → Apps → FTP Mirror → Storage → Clear data.
+APK also available from GitHub Actions Artifacts.
 
 ## License
 MIT © 2026

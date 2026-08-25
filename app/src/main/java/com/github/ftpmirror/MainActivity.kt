@@ -16,6 +16,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
@@ -23,7 +24,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.apache.commons.net.ftp.FTPClient
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -44,6 +44,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var etInclude: TextInputEditText
     private lateinit var etExclude: TextInputEditText
     private lateinit var switchDelete: SwitchMaterial
+    private lateinit var switchPassive: SwitchMaterial
     private lateinit var spinnerInterval: Spinner
     private lateinit var btnSelectFolder: MaterialButton
     private lateinit var btnTest: MaterialButton
@@ -69,6 +70,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        findViewById<MaterialToolbar>(R.id.toolbar).title = "FTP Mirror"
+
         tvStatus = findViewById(R.id.tvStatus)
         tvLastRun = findViewById(R.id.tvLastRun)
         tvStats = findViewById(R.id.tvStats)
@@ -82,6 +85,7 @@ class MainActivity : AppCompatActivity() {
         etInclude = findViewById(R.id.etInclude)
         etExclude = findViewById(R.id.etExclude)
         switchDelete = findViewById(R.id.switchDelete)
+        switchPassive = findViewById(R.id.switchPassive)
         spinnerInterval = findViewById(R.id.spinnerInterval)
         btnSelectFolder = findViewById(R.id.btnSelectFolder)
         btnTest = findViewById(R.id.btnTest)
@@ -110,6 +114,7 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Select a folder first", Toast.LENGTH_LONG).show()
                 return@setOnClickListener
             }
+            saveConfig() // always persist before run
             prefs().edit().putBoolean("cancel_requested", false).apply()
             MirrorWorker.enqueueOneTime(this)
             tvStatus.text = getString(R.string.status_running)
@@ -152,6 +157,7 @@ class MainActivity : AppCompatActivity() {
         etInclude.setText(p.getString("include_patterns", ""))
         etExclude.setText(p.getString("exclude_patterns", ""))
         switchDelete.isChecked = p.getBoolean("delete_after", true)
+        switchPassive.isChecked = p.getBoolean("passive_mode", true)
 
         val idx = intervalMinutes.indexOf(p.getLong("interval_min", 15L)).coerceAtLeast(0)
         spinnerInterval.setSelection(idx)
@@ -172,6 +178,7 @@ class MainActivity : AppCompatActivity() {
             .putString("include_patterns", etInclude.text.toString().trim())
             .putString("exclude_patterns", etExclude.text.toString().trim())
             .putBoolean("delete_after", switchDelete.isChecked)
+            .putBoolean("passive_mode", switchPassive.isChecked)
             .putLong("interval_min", minutes)
             .apply()
     }
@@ -203,6 +210,9 @@ class MainActivity : AppCompatActivity() {
         val running = p.getBoolean("is_running", false)
 
         tvStatus.text = if (running) getString(R.string.status_running) else getString(R.string.status_idle)
+        tvStatus.setTextColor(
+            if (running) getColor(R.color.md_theme_primary) else getColor(R.color.md_theme_on_surface)
+        )
 
         tvLastRun.text = if (lastTs > 0) {
             val fmt = SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault())
@@ -211,7 +221,6 @@ class MainActivity : AppCompatActivity() {
 
         tvStats.text = "Uploaded: $uploaded  ·  Failed: $failed  ·  Skipped: $skipped"
 
-        // Simple history (last 5 entries stored as newline-separated)
         val history = p.getString("run_history", "") ?: ""
         tvHistory.text = if (history.isBlank()) "No history yet" else history
     }
@@ -221,39 +230,28 @@ class MainActivity : AppCompatActivity() {
         val port = etPort.text.toString().toIntOrNull() ?: 21
         val user = etUser.text.toString().trim()
         val pass = etPass.text.toString()
+        val passive = switchPassive.isChecked
 
         if (host.isEmpty()) {
             Toast.makeText(this, "Enter host first", Toast.LENGTH_SHORT).show()
             return
         }
 
+        // Persist current form so Run Now uses the same values
+        saveConfig()
+
         btnTest.isEnabled = false
         btnTest.text = "Testing…"
 
         CoroutineScope(Dispatchers.IO).launch {
-            var message: String
-            try {
-                val client = FTPClient()
-                client.connectTimeout = 10000
-                client.defaultTimeout = 10000
-                client.connect(host, port)
-                val ok = client.login(user, pass)
-                message = if (ok) {
-                    client.enterLocalPassiveMode()
-                    "Connection successful"
-                } else "Login failed"
-                if (client.isConnected) {
-                    client.logout()
-                    client.disconnect()
-                }
-            } catch (e: Exception) {
-                message = "Failed: ${e.message?.take(60) ?: "error"}"
-            }
+            val result = FtpHelper.connect(host, port, user, pass, passive)
+            FtpHelper.disconnectQuietly(result.client)
 
             withContext(Dispatchers.Main) {
                 btnTest.isEnabled = true
                 btnTest.text = getString(R.string.test_connection)
-                Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+                val msg = if (result.success) "✓ ${result.message}" else "✗ ${result.message}"
+                Toast.makeText(this@MainActivity, msg, Toast.LENGTH_LONG).show()
             }
         }
     }
