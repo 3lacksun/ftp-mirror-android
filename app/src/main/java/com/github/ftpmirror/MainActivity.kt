@@ -34,20 +34,23 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvStatus: TextView
     private lateinit var tvLastRun: TextView
     private lateinit var tvStats: TextView
+    private lateinit var tvHistory: TextView
     private lateinit var tvCurrentFolder: TextView
     private lateinit var etHost: TextInputEditText
     private lateinit var etPort: TextInputEditText
     private lateinit var etUser: TextInputEditText
     private lateinit var etPass: TextInputEditText
     private lateinit var etRemoteDir: TextInputEditText
+    private lateinit var etInclude: TextInputEditText
+    private lateinit var etExclude: TextInputEditText
     private lateinit var switchDelete: SwitchMaterial
     private lateinit var spinnerInterval: Spinner
     private lateinit var btnSelectFolder: MaterialButton
     private lateinit var btnTest: MaterialButton
     private lateinit var btnSave: MaterialButton
     private lateinit var btnRunNow: MaterialButton
+    private lateinit var btnCancel: MaterialButton
 
-    // minutes for each spinner position
     private val intervalMinutes = listOf(15L, 30L, 60L, 120L, 360L, 720L, 1440L)
 
     private val directoryPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -69,18 +72,22 @@ class MainActivity : AppCompatActivity() {
         tvStatus = findViewById(R.id.tvStatus)
         tvLastRun = findViewById(R.id.tvLastRun)
         tvStats = findViewById(R.id.tvStats)
+        tvHistory = findViewById(R.id.tvHistory)
         tvCurrentFolder = findViewById(R.id.tvCurrentFolder)
         etHost = findViewById(R.id.etHost)
         etPort = findViewById(R.id.etPort)
         etUser = findViewById(R.id.etUser)
         etPass = findViewById(R.id.etPass)
         etRemoteDir = findViewById(R.id.etRemoteDir)
+        etInclude = findViewById(R.id.etInclude)
+        etExclude = findViewById(R.id.etExclude)
         switchDelete = findViewById(R.id.switchDelete)
         spinnerInterval = findViewById(R.id.spinnerInterval)
         btnSelectFolder = findViewById(R.id.btnSelectFolder)
         btnTest = findViewById(R.id.btnTest)
         btnSave = findViewById(R.id.btnSave)
         btnRunNow = findViewById(R.id.btnRunNow)
+        btnCancel = findViewById(R.id.btnCancel)
 
         val adapter = ArrayAdapter.createFromResource(
             this, R.array.interval_labels, android.R.layout.simple_spinner_item
@@ -92,23 +99,28 @@ class MainActivity : AppCompatActivity() {
         refreshStatus()
 
         btnSelectFolder.setOnClickListener { directoryPicker.launch(null) }
-
         btnTest.setOnClickListener { testConnection() }
-
         btnSave.setOnClickListener {
             saveConfig()
             schedulePeriodicWork()
             Toast.makeText(this, "Saved and scheduled", Toast.LENGTH_LONG).show()
         }
-
         btnRunNow.setOnClickListener {
             if (prefs().getString("tree_uri", null) == null) {
                 Toast.makeText(this, "Select a folder first", Toast.LENGTH_LONG).show()
                 return@setOnClickListener
             }
+            prefs().edit().putBoolean("cancel_requested", false).apply()
             MirrorWorker.enqueueOneTime(this)
             tvStatus.text = getString(R.string.status_running)
             Toast.makeText(this, "Mirror started", Toast.LENGTH_SHORT).show()
+        }
+        btnCancel.setOnClickListener {
+            prefs().edit().putBoolean("cancel_requested", true).apply()
+            WorkManager.getInstance(this).cancelUniqueWork("ftp_mirror")
+            WorkManager.getInstance(this).cancelAllWorkByTag("ftp_mirror_one_time")
+            Toast.makeText(this, "Cancel requested", Toast.LENGTH_SHORT).show()
+            tvStatus.text = getString(R.string.status_idle)
         }
     }
 
@@ -122,14 +134,11 @@ class MainActivity : AppCompatActivity() {
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
         EncryptedSharedPreferences.create(
-            this,
-            "ftp_secure_prefs",
-            masterKey,
+            this, "ftp_secure_prefs", masterKey,
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         )
     } catch (e: Exception) {
-        // Fallback for rare devices where crypto fails
         getSharedPreferences("ftp_prefs", MODE_PRIVATE)
     }
 
@@ -140,17 +149,16 @@ class MainActivity : AppCompatActivity() {
         etUser.setText(p.getString("username", ""))
         etPass.setText(p.getString("password", ""))
         etRemoteDir.setText(p.getString("remote_dir", "/mirror"))
+        etInclude.setText(p.getString("include_patterns", ""))
+        etExclude.setText(p.getString("exclude_patterns", ""))
         switchDelete.isChecked = p.getBoolean("delete_after", true)
 
         val idx = intervalMinutes.indexOf(p.getLong("interval_min", 15L)).coerceAtLeast(0)
         spinnerInterval.setSelection(idx)
 
         val uri = p.getString("tree_uri", null)
-        tvCurrentFolder.text = if (uri != null) {
-            Uri.parse(uri).lastPathSegment ?: "Custom folder"
-        } else {
-            "No folder selected"
-        }
+        tvCurrentFolder.text = if (uri != null) Uri.parse(uri).lastPathSegment ?: "Custom folder"
+        else "No folder selected"
     }
 
     private fun saveConfig() {
@@ -161,6 +169,8 @@ class MainActivity : AppCompatActivity() {
             .putString("username", etUser.text.toString().trim())
             .putString("password", etPass.text.toString())
             .putString("remote_dir", etRemoteDir.text.toString().trim().ifEmpty { "/mirror" })
+            .putString("include_patterns", etInclude.text.toString().trim())
+            .putString("exclude_patterns", etExclude.text.toString().trim())
             .putBoolean("delete_after", switchDelete.isChecked)
             .putLong("interval_min", minutes)
             .apply()
@@ -168,7 +178,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun schedulePeriodicWork() {
         val minutes = intervalMinutes.getOrElse(spinnerInterval.selectedItemPosition) { 15L }
-        // WorkManager minimum periodic is 15 minutes
         val interval = minutes.coerceAtLeast(15L)
 
         val constraints = Constraints.Builder()
@@ -178,6 +187,7 @@ class MainActivity : AppCompatActivity() {
         val request = PeriodicWorkRequestBuilder<MirrorWorker>(interval, TimeUnit.MINUTES)
             .setConstraints(constraints)
             .setInitialDelay(30, TimeUnit.SECONDS)
+            .addTag("ftp_mirror_periodic")
             .build()
 
         WorkManager.getInstance(this)
@@ -197,11 +207,13 @@ class MainActivity : AppCompatActivity() {
         tvLastRun.text = if (lastTs > 0) {
             val fmt = SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault())
             "Last run: ${fmt.format(Date(lastTs))}"
-        } else {
-            "Last run: Never"
-        }
+        } else "Last run: Never"
 
         tvStats.text = "Uploaded: $uploaded  ·  Failed: $failed  ·  Skipped: $skipped"
+
+        // Simple history (last 5 entries stored as newline-separated)
+        val history = p.getString("run_history", "") ?: ""
+        tvHistory.text = if (history.isBlank()) "No history yet" else history
     }
 
     private fun testConnection() {
@@ -226,14 +238,14 @@ class MainActivity : AppCompatActivity() {
                 client.defaultTimeout = 10000
                 client.connect(host, port)
                 val ok = client.login(user, pass)
-                if (ok) {
+                message = if (ok) {
                     client.enterLocalPassiveMode()
-                    message = "Connection successful"
+                    "Connection successful"
+                } else "Login failed"
+                if (client.isConnected) {
                     client.logout()
-                } else {
-                    message = "Login failed"
+                    client.disconnect()
                 }
-                if (client.isConnected) client.disconnect()
             } catch (e: Exception) {
                 message = "Failed: ${e.message?.take(60) ?: "error"}"
             }

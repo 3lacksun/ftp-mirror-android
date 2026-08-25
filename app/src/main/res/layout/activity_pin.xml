@@ -3,47 +3,54 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="24dp"
-    android:gravity="center_horizontal">
+    android:gravity="center"
+    android:padding="32dp">
 
     <TextView
         android:id="@+id/tvTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="48dp"
-        android:layout_marginBottom="32dp"
         android:text="Enter 6-Digit PIN"
-        android:textSize="22sp"
-        android:textStyle="bold" />
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp" />
 
     <EditText
         android:id="@+id/etPin1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
         android:hint="PIN"
         android:inputType="numberPassword"
         android:maxLength="6"
         android:gravity="center"
-        android:textSize="20sp" />
+        android:textSize="22sp"
+        android:layout_marginBottom="12dp" />
 
     <EditText
         android:id="@+id/etPin2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
         android:hint="Confirm PIN"
         android:inputType="numberPassword"
         android:maxLength="6"
         android:gravity="center"
-        android:textSize="20sp"
-        android:visibility="gone" />
+        android:textSize="22sp"
+        android:visibility="gone"
+        android:layout_marginBottom="24dp" />
 
     <Button
         android:id="@+id/btnConfirm"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Confirm"
-        android:textSize="16sp" />
+        android:layout_marginBottom="12dp" />
+
+    <Button
+        android:id="@+id/btnBiometric"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/use_biometric"
+        android:visibility="gone"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
 </LinearLayout>
