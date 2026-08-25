@@ -3,6 +3,7 @@ package com.github.ftpmirror
 import android.content.Intent
 import android.os.Bundle
 import android.text.InputFilter
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
@@ -32,17 +33,23 @@ class PinActivity : AppCompatActivity() {
 
         if (isSetup) {
             tvTitle.text = "Create 6-Digit PIN"
-            etPin2.visibility = EditText.VISIBLE
+            etPin2.visibility = View.VISIBLE
         } else {
             tvTitle.text = "Enter 6-Digit PIN"
-            etPin2.visibility = EditText.GONE
+            etPin2.visibility = View.GONE
         }
 
-        val filter = InputFilter { source, _, _, _, _, _ ->
-            if (source.toString().isEmpty()) "" else if (source.matches(Regex("[0-9]+"))) source else ""
+        val digitsOnly = InputFilter { source, _, _, _, _, _ ->
+            if (source == null || source.isEmpty()) {
+                source
+            } else if (source.toString().matches(Regex("[0-9]+"))) {
+                source
+            } else {
+                ""
+            }
         }
-        etPin1.filters = arrayOf(InputFilter.LengthFilter(6), filter)
-        etPin2.filters = arrayOf(InputFilter.LengthFilter(6), filter)
+        etPin1.filters = arrayOf(InputFilter.LengthFilter(6), digitsOnly)
+        etPin2.filters = arrayOf(InputFilter.LengthFilter(6), digitsOnly)
 
         btnConfirm.setOnClickListener {
             val pin1 = etPin1.text.toString().trim()
