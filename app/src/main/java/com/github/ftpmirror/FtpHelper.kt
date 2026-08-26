@@ -3,10 +3,10 @@ package com.github.ftpmirror
 import android.util.Log
 import org.apache.commons.net.ftp.FTP
 import org.apache.commons.net.ftp.FTPClient
+import org.apache.commons.net.ftp.FTPFile
 import org.apache.commons.net.ftp.FTPReply
 import java.net.InetAddress
 
-/** Shared FTP connection helper with better diagnostics. */
 object FtpHelper {
 
     private const val TAG = "FtpHelper"
@@ -33,7 +33,6 @@ object FtpHelper {
             client.setDataTimeout(dataTimeoutMs)
             client.controlKeepAliveTimeout = 30
 
-            // Resolve host first so we get a clearer error
             val addr = try {
                 InetAddress.getByName(host)
             } catch (e: Exception) {
@@ -60,12 +59,12 @@ object FtpHelper {
             }
             client.setFileType(FTP.BINARY_FILE_TYPE)
             client.setFileTransferMode(FTP.STREAM_TRANSFER_MODE)
-
-            val sys = try { client.systemType } catch (_: Exception) { "unknown" }
-            Log.i(TAG, "Connected to $host as $username (sys=$sys, passive=$passive)")
-            return ConnectResult(true, "OK — $sys", client)
+            return ConnectResult(true, "Connected", client)
         } catch (e: Exception) {
-            try { if (client.isConnected) client.disconnect() } catch (_: Exception) {}
+            try {
+                if (client.isConnected) client.disconnect()
+            } catch (_: Exception) {
+            }
             val msg = when {
                 e.message?.contains("ECONNREFUSED", true) == true -> "Connection refused (check host/port)"
                 e.message?.contains("ETIMEDOUT", true) == true -> "Timed out (firewall / wrong host?)"
@@ -81,9 +80,28 @@ object FtpHelper {
         if (client == null) return
         try {
             if (client.isConnected) {
-                try { client.logout() } catch (_: Exception) {}
+                try {
+                    client.logout()
+                } catch (_: Exception) {
+                }
                 client.disconnect()
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
+    }
+
+    fun list(client: FTPClient, path: String): Array<FTPFile> {
+        client.changeWorkingDirectory(path)
+        return client.listFiles() ?: emptyArray()
+    }
+
+    fun ensureDir(client: FTPClient, path: String) {
+        val parts = path.split("/").filter { it.isNotEmpty() }
+        var current = ""
+        for (part in parts) {
+            current += "/$part"
+            client.makeDirectory(current)
+        }
+        client.changeWorkingDirectory(path)
     }
 }
