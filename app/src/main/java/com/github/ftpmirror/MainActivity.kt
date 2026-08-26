@@ -1,258 +1,162 @@
 package com.github.ftpmirror
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import android.widget.ArrayAdapter
+import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
-import androidx.work.Constraints
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.NetworkType
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.switchmaterial.SwitchMaterial
-import com.google.android.material.textfield.TextInputEditText
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.google.android.material.card.MaterialCardView
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var store: PairStore
     private lateinit var tvStatus: TextView
     private lateinit var tvLastRun: TextView
     private lateinit var tvStats: TextView
     private lateinit var tvHistory: TextView
-    private lateinit var tvCurrentFolder: TextView
-    private lateinit var etHost: TextInputEditText
-    private lateinit var etPort: TextInputEditText
-    private lateinit var etUser: TextInputEditText
-    private lateinit var etPass: TextInputEditText
-    private lateinit var etRemoteDir: TextInputEditText
-    private lateinit var etInclude: TextInputEditText
-    private lateinit var etExclude: TextInputEditText
-    private lateinit var switchDelete: SwitchMaterial
-    private lateinit var switchPassive: SwitchMaterial
+    private lateinit var pairContainer: LinearLayout
     private lateinit var spinnerInterval: Spinner
-    private lateinit var btnSelectFolder: MaterialButton
-    private lateinit var btnTest: MaterialButton
-    private lateinit var btnSave: MaterialButton
-    private lateinit var btnRunNow: MaterialButton
-    private lateinit var btnCancel: MaterialButton
-
     private val intervalMinutes = listOf(15L, 30L, 60L, 120L, 360L, 720L, 1440L)
-
-    private val directoryPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        uri?.let {
-            contentResolver.takePersistableUriPermission(
-                it,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            )
-            prefs().edit().putString("tree_uri", it.toString()).apply()
-            tvCurrentFolder.text = it.lastPathSegment ?: it.toString()
-            Toast.makeText(this, "Folder selected", Toast.LENGTH_SHORT).show()
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        store = PairStore(this)
 
         findViewById<MaterialToolbar>(R.id.toolbar).title = "FTP Mirror"
-
         tvStatus = findViewById(R.id.tvStatus)
         tvLastRun = findViewById(R.id.tvLastRun)
         tvStats = findViewById(R.id.tvStats)
         tvHistory = findViewById(R.id.tvHistory)
-        tvCurrentFolder = findViewById(R.id.tvCurrentFolder)
-        etHost = findViewById(R.id.etHost)
-        etPort = findViewById(R.id.etPort)
-        etUser = findViewById(R.id.etUser)
-        etPass = findViewById(R.id.etPass)
-        etRemoteDir = findViewById(R.id.etRemoteDir)
-        etInclude = findViewById(R.id.etInclude)
-        etExclude = findViewById(R.id.etExclude)
-        switchDelete = findViewById(R.id.switchDelete)
-        switchPassive = findViewById(R.id.switchPassive)
+        pairContainer = findViewById(R.id.pairContainer)
         spinnerInterval = findViewById(R.id.spinnerInterval)
-        btnSelectFolder = findViewById(R.id.btnSelectFolder)
-        btnTest = findViewById(R.id.btnTest)
-        btnSave = findViewById(R.id.btnSave)
-        btnRunNow = findViewById(R.id.btnRunNow)
-        btnCancel = findViewById(R.id.btnCancel)
 
         val adapter = ArrayAdapter.createFromResource(
             this, R.array.interval_labels, android.R.layout.simple_spinner_item
         )
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerInterval.adapter = adapter
+        val idx = intervalMinutes.indexOf(store.intervalMin()).coerceAtLeast(0)
+        spinnerInterval.setSelection(idx)
 
-        loadConfig()
-        refreshStatus()
-
-        btnSelectFolder.setOnClickListener { directoryPicker.launch(null) }
-        btnTest.setOnClickListener { testConnection() }
-        btnSave.setOnClickListener {
-            saveConfig()
-            schedulePeriodicWork()
-            Toast.makeText(this, "Saved and scheduled", Toast.LENGTH_LONG).show()
+        findViewById<MaterialButton>(R.id.btnAddPair).setOnClickListener {
+            val p = store.newPair()
+            store.upsert(p)
+            openPair(p.id)
         }
-        btnRunNow.setOnClickListener {
-            if (prefs().getString("tree_uri", null) == null) {
-                Toast.makeText(this, "Select a folder first", Toast.LENGTH_LONG).show()
+        findViewById<MaterialButton>(R.id.btnRunNow).setOnClickListener {
+            if (store.list().none { it.enabled }) {
+                Toast.makeText(this, "Add and enable a pair first", Toast.LENGTH_LONG).show()
                 return@setOnClickListener
             }
-            saveConfig() // always persist before run
-            prefs().edit().putBoolean("cancel_requested", false).apply()
+            store.raw().edit().putBoolean("cancel_requested", false).apply()
             MirrorWorker.enqueueOneTime(this)
             tvStatus.text = getString(R.string.status_running)
-            Toast.makeText(this, "Mirror started", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Sync started", Toast.LENGTH_SHORT).show()
         }
-        btnCancel.setOnClickListener {
-            prefs().edit().putBoolean("cancel_requested", true).apply()
-            WorkManager.getInstance(this).cancelUniqueWork("ftp_mirror")
-            WorkManager.getInstance(this).cancelAllWorkByTag("ftp_mirror_one_time")
-            Toast.makeText(this, "Cancel requested", Toast.LENGTH_SHORT).show()
+        findViewById<MaterialButton>(R.id.btnCancel).setOnClickListener {
+            store.raw().edit().putBoolean("cancel_requested", true).apply()
+            MirrorWorker.cancelAll(this)
             tvStatus.text = getString(R.string.status_idle)
+            Toast.makeText(this, "Cancel requested", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<MaterialButton>(R.id.btnSaveSchedule).setOnClickListener {
+            val minutes = intervalMinutes.getOrElse(spinnerInterval.selectedItemPosition) { 15L }
+            store.setIntervalMin(minutes)
+            MirrorWorker.schedule(this, minutes)
+            Toast.makeText(this, "Scheduled every $minutes min", Toast.LENGTH_LONG).show()
         }
     }
 
     override fun onResume() {
         super.onResume()
+        renderPairs()
         refreshStatus()
     }
 
-    private fun prefs() = try {
-        val masterKey = MasterKey.Builder(this)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-        EncryptedSharedPreferences.create(
-            this, "ftp_secure_prefs", masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
-    } catch (e: Exception) {
-        getSharedPreferences("ftp_prefs", MODE_PRIVATE)
+    private fun openPair(id: String) {
+        val i = Intent(this, PairEditActivity::class.java)
+        i.putExtra("pair_id", id)
+        startActivity(i)
     }
 
-    private fun loadConfig() {
-        val p = prefs()
-        etHost.setText(p.getString("host", ""))
-        etPort.setText(p.getInt("port", 21).toString())
-        etUser.setText(p.getString("username", ""))
-        etPass.setText(p.getString("password", ""))
-        etRemoteDir.setText(p.getString("remote_dir", "/mirror"))
-        etInclude.setText(p.getString("include_patterns", ""))
-        etExclude.setText(p.getString("exclude_patterns", ""))
-        switchDelete.isChecked = p.getBoolean("delete_after", true)
-        switchPassive.isChecked = p.getBoolean("passive_mode", true)
+    private fun renderPairs() {
+        pairContainer.removeAllViews()
+        val pairs = store.list()
+        if (pairs.isEmpty()) {
+            val empty = TextView(this)
+            empty.text = "No folder pairs yet. Tap Add pair."
+            empty.setTextColor(getColor(R.color.md_theme_on_surface_variant))
+            empty.textSize = 14f
+            pairContainer.addView(empty)
+            return
+        }
+        for (p in pairs) {
+            val card = MaterialCardView(this)
+            val lp = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            lp.bottomMargin = (12 * resources.displayMetrics.density).toInt()
+            card.layoutParams = lp
+            card.radius = 16 * resources.displayMetrics.density
+            card.cardElevation = 0f
+            card.strokeWidth = 1
+            card.strokeColor = getColor(R.color.md_theme_surface_variant)
+            card.setCardBackgroundColor(getColor(R.color.md_theme_card))
 
-        val idx = intervalMinutes.indexOf(p.getLong("interval_min", 15L)).coerceAtLeast(0)
-        spinnerInterval.setSelection(idx)
+            val inner = LinearLayout(this)
+            inner.orientation = LinearLayout.VERTICAL
+            val pad = (16 * resources.displayMetrics.density).toInt()
+            inner.setPadding(pad, pad, pad, pad)
 
-        val uri = p.getString("tree_uri", null)
-        tvCurrentFolder.text = if (uri != null) Uri.parse(uri).lastPathSegment ?: "Custom folder"
-        else "No folder selected"
-    }
+            val title = TextView(this)
+            title.text = p.name
+            title.textSize = 16f
+            title.setTextColor(getColor(R.color.md_theme_on_surface))
+            title.setTypeface(title.typeface, android.graphics.Typeface.BOLD)
 
-    private fun saveConfig() {
-        val minutes = intervalMinutes.getOrElse(spinnerInterval.selectedItemPosition) { 15L }
-        prefs().edit()
-            .putString("host", etHost.text.toString().trim())
-            .putInt("port", etPort.text.toString().toIntOrNull() ?: 21)
-            .putString("username", etUser.text.toString().trim())
-            .putString("password", etPass.text.toString())
-            .putString("remote_dir", etRemoteDir.text.toString().trim().ifEmpty { "/mirror" })
-            .putString("include_patterns", etInclude.text.toString().trim())
-            .putString("exclude_patterns", etExclude.text.toString().trim())
-            .putBoolean("delete_after", switchDelete.isChecked)
-            .putBoolean("passive_mode", switchPassive.isChecked)
-            .putLong("interval_min", minutes)
-            .apply()
-    }
+            val sub = TextView(this)
+            val onOff = if (p.enabled) "On" else "Off"
+            sub.text = "$onOff · ${SyncPair.modeLabel(p.mode)}\n${p.host}${p.remoteDir}"
+            sub.textSize = 13f
+            sub.setTextColor(getColor(R.color.md_theme_on_surface_variant))
+            val top = (6 * resources.displayMetrics.density).toInt()
+            sub.setPadding(0, top, 0, 0)
 
-    private fun schedulePeriodicWork() {
-        val minutes = intervalMinutes.getOrElse(spinnerInterval.selectedItemPosition) { 15L }
-        val interval = minutes.coerceAtLeast(15L)
-
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-
-        val request = PeriodicWorkRequestBuilder<MirrorWorker>(interval, TimeUnit.MINUTES)
-            .setConstraints(constraints)
-            .setInitialDelay(30, TimeUnit.SECONDS)
-            .addTag("ftp_mirror_periodic")
-            .build()
-
-        WorkManager.getInstance(this)
-            .enqueueUniquePeriodicWork("ftp_mirror", ExistingPeriodicWorkPolicy.UPDATE, request)
+            inner.addView(title)
+            inner.addView(sub)
+            card.addView(inner)
+            card.setOnClickListener { openPair(p.id) }
+            pairContainer.addView(card)
+        }
     }
 
     private fun refreshStatus() {
-        val p = prefs()
-        val lastTs = p.getLong("last_run_ts", 0L)
-        val uploaded = p.getInt("last_uploaded", 0)
-        val failed = p.getInt("last_failed", 0)
-        val skipped = p.getInt("last_skipped", 0)
+        val p = store.raw()
         val running = p.getBoolean("is_running", false)
-
         tvStatus.text = if (running) getString(R.string.status_running) else getString(R.string.status_idle)
-        tvStatus.setTextColor(
-            if (running) getColor(R.color.md_theme_primary) else getColor(R.color.md_theme_on_surface)
-        )
-
+        val lastTs = p.getLong("last_run_ts", 0L)
         tvLastRun.text = if (lastTs > 0) {
             val fmt = SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault())
             "Last run: ${fmt.format(Date(lastTs))}"
-        } else "Last run: Never"
-
-        tvStats.text = "Uploaded: $uploaded  ·  Failed: $failed  ·  Skipped: $skipped"
-
+        } else {
+            "Last run: Never"
+        }
+        val up = p.getInt("last_uploaded", 0)
+        val down = p.getInt("last_downloaded", 0)
+        val fail = p.getInt("last_failed", 0)
+        tvStats.text = "↑ $up uploaded   ↓ $down downloaded   ✗ $fail failed"
         val history = p.getString("run_history", "") ?: ""
-        tvHistory.text = if (history.isBlank()) "No history yet" else history
-    }
-
-    private fun testConnection() {
-        val host = etHost.text.toString().trim()
-        val port = etPort.text.toString().toIntOrNull() ?: 21
-        val user = etUser.text.toString().trim()
-        val pass = etPass.text.toString()
-        val passive = switchPassive.isChecked
-
-        if (host.isEmpty()) {
-            Toast.makeText(this, "Enter host first", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        // Persist current form so Run Now uses the same values
-        saveConfig()
-
-        btnTest.isEnabled = false
-        btnTest.text = "Testing…"
-
-        CoroutineScope(Dispatchers.IO).launch {
-            val result = FtpHelper.connect(host, port, user, pass, passive)
-            FtpHelper.disconnectQuietly(result.client)
-
-            withContext(Dispatchers.Main) {
-                btnTest.isEnabled = true
-                btnTest.text = getString(R.string.test_connection)
-                val msg = if (result.success) "✓ ${result.message}" else "✗ ${result.message}"
-                Toast.makeText(this@MainActivity, msg, Toast.LENGTH_LONG).show()
-            }
-        }
+        tvHistory.text = if (history.isBlank()) getString(R.string.no_history) else history
     }
 }
