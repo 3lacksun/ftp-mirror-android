@@ -28,15 +28,14 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".MainActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".MainActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".PairEditActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".LocalExplorerActivity" android:exported="false" />
+        <activity android:name=".RemoteExplorerActivity" android:exported="false" />
 
         <service
             android:name=".MirrorForegroundService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
-
     </application>
 </manifest>

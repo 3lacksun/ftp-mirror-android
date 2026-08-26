@@ -1,31 +1,29 @@
 # FTP Mirror Android
 
-**Commercial-grade native Android app for scheduled one-way FTP mirroring.**
-
-Version **2.3.0**
-
-### UI / UX
-- Full Material 3 design system (light + dark)
-- Polished PIN / biometric unlock screen
-- Hero status card + quick actions
-- Sectioned settings (folder, server, filters, options)
-- Outlined cards, tonal buttons, consistent 16dp radius
-- Clear empty states and hierarchy
+Version **3.0.0** — multi-pair two-way FTP folder sync.
 
 ### Features
-- 6-digit PIN + optional biometric unlock
-- Encrypted credential storage
-- Status dashboard + transfer history
-- Configurable schedule (15 min → daily)
-- Include / exclude file patterns
-- Passive / Active mode toggle
-- Connection diagnostics
-- Cancel running job
-- WorkManager + network constraints
-- Recursive mirror + delete-after-upload
+- **Multiple folder pairs** (each with its own local folder + FTP destination)
+- **Two-way sync** — upload missing remote files and download missing local files
+- **Upload & delete local** after successful upload
+- **Download & delete remote** after successful download
+- **Scheduled sync** via WorkManager (15 min → daily)
+- **Local file explorer** and **remote FTP explorer**
+- Foreground **notifications** with upload/download summary
+- PIN + optional biometric unlock
+- Encrypted pair credentials
 
-### Build
-Open in Android Studio or run GitHub Actions and download the APK from Artifacts.
+### How to use
+1. Unlock with PIN / biometrics.
+2. Tap **Add pair** → choose local folder, enter FTP details, pick a mode.
+3. **Browse local** / **Browse remote** to inspect both sides.
+4. Save the pair. Repeat for more pairs.
+5. **Save schedule**, or tap **Sync now**.
+
+### Modes
+- Two-way sync — copy missing files both directions (existing names are skipped)
+- Upload & delete local — send then remove local original
+- Download & delete remote — pull then remove remote original
 
 ## License
 MIT © 2026
