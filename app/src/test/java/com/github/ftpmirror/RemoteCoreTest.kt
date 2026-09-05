@@ -60,6 +60,48 @@ class RemoteCoreTest {
         }
     }
 
+    @Test
+    fun sameSizeButNewerLocalFileUploadsUnderNewestWins() {
+        assertEquals(
+            FileDecision.UPLOAD,
+            SyncConflictResolver.decide(
+                localSize = 4096,
+                localModifiedMillis = 20_000,
+                remoteSize = 4096,
+                remoteModifiedMillis = 10_000,
+                policy = ConflictPolicy.NEWEST_WINS
+            )
+        )
+    }
+
+    @Test
+    fun equalMetadataSkipsWithoutDestructiveAssumption() {
+        assertEquals(
+            FileDecision.SKIP,
+            SyncConflictResolver.decide(
+                localSize = 4096,
+                localModifiedMillis = 10_000,
+                remoteSize = 4096,
+                remoteModifiedMillis = 10_500,
+                policy = ConflictPolicy.NEWEST_WINS
+            )
+        )
+    }
+
+    @Test
+    fun newestWinsWithoutTimestampsReportsConflictWhenSizesDiffer() {
+        assertEquals(
+            FileDecision.CONFLICT,
+            SyncConflictResolver.decide(
+                localSize = 100,
+                localModifiedMillis = null,
+                remoteSize = 200,
+                remoteModifiedMillis = null,
+                policy = ConflictPolicy.NEWEST_WINS
+            )
+        )
+    }
+
     private fun pair(
         protocol: RemoteProtocol,
         host: String = "example.com",

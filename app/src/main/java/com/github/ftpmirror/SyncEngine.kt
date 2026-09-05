@@ -6,7 +6,6 @@ import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import java.io.InputStream
 import java.io.OutputStream
-import kotlin.math.abs
 
 class SyncEngine(private val context: Context) {
 
@@ -158,30 +157,20 @@ class SyncEngine(private val context: Context) {
         pair: SyncPair,
         result: Result
     ) {
-        val localSize = local.length()
-        if (localSize == remoteEntry.size) {
-            result.skipped++
-            return
-        }
+        val decision = SyncConflictResolver.decide(
+            localSize = local.length(),
+            localModifiedMillis = local.lastModified().takeIf { it > 0L },
+            remoteSize = remoteEntry.size,
+            remoteModifiedMillis = remoteEntry.modifiedMillis,
+            policy = ConflictPolicy.fromStored(pair.conflictPolicy)
+        )
 
-        when (ConflictPolicy.fromStored(pair.conflictPolicy)) {
-            ConflictPolicy.LOCAL_WINS -> uploadFile(local, remote, remoteEntry.path, false, result)
-            ConflictPolicy.REMOTE_WINS -> downloadFile(parent, local, remoteEntry.name, remote, remoteEntry, false, result)
-            ConflictPolicy.NEWEST_WINS -> {
-                val localModified = local.lastModified()
-                val remoteModified = remoteEntry.modifiedMillis
-                if (localModified <= 0L || remoteModified == null || remoteModified <= 0L) {
-                    result.conflicts++
-                    return
-                }
-                val delta = localModified - remoteModified
-                when {
-                    delta > CLOCK_SKEW_TOLERANCE_MS -> uploadFile(local, remote, remoteEntry.path, false, result)
-                    delta < -CLOCK_SKEW_TOLERANCE_MS ->
-                        downloadFile(parent, local, remoteEntry.name, remote, remoteEntry, false, result)
-                    abs(delta) <= CLOCK_SKEW_TOLERANCE_MS -> result.conflicts++
-                }
-            }
+        when (decision) {
+            FileDecision.SKIP -> result.skipped++
+            FileDecision.UPLOAD -> uploadFile(local, remote, remoteEntry.path, false, result)
+            FileDecision.DOWNLOAD ->
+                downloadFile(parent, local, remoteEntry.name, remote, remoteEntry, false, result)
+            FileDecision.CONFLICT -> result.conflicts++
         }
     }
 
@@ -206,8 +195,9 @@ class SyncEngine(private val context: Context) {
             } else if (child.isFile) {
                 val existing = remoteByName[name]
                 if (existing != null && !existing.isDirectory && existing.size == child.length()) {
+                    // A same-size destination is not proof that this source was transferred by us.
+                    // In delete-after mode, never delete the source unless an upload actually succeeds.
                     result.skipped++
-                    if (deleteAfter && child.delete()) result.deleted++
                 } else {
                     uploadFile(child, remote, path, deleteAfter, result)
                 }
@@ -236,16 +226,9 @@ class SyncEngine(private val context: Context) {
             } else {
                 val existing = localByName[entry.name]?.takeIf { it.isFile }
                 if (existing != null && existing.length() == entry.size) {
+                    // A same-size local file is not proof of a completed download. Never remove
+                    // the remote source unless this run successfully downloaded it first.
                     result.skipped++
-                    if (deleteAfter) {
-                        try {
-                            remote.delete(entry.path)
-                            result.deleted++
-                        } catch (e: Exception) {
-                            Log.e(tag, "Remote delete failed ${entry.path}", e)
-                            result.failed++
-                        }
-                    }
                 } else {
                     downloadFile(localDir, existing, entry.name, remote, entry, deleteAfter, result)
                 }
@@ -267,7 +250,10 @@ class SyncEngine(private val context: Context) {
         try {
             input.use { remote.upload(remotePath, it) }
             result.uploaded++
-            if (deleteAfter && local.delete()) result.deleted++
+            if (deleteAfter) {
+                if (local.delete()) result.deleted++
+                else result.failed++
+            }
         } catch (e: Exception) {
             Log.e(tag, "Upload failed $remotePath", e)
             result.failed++
@@ -309,8 +295,4 @@ class SyncEngine(private val context: Context) {
 
     private fun cancelled(store: PairStore): Boolean =
         store.raw().getBoolean("cancel_requested", false)
-
-    companion object {
-        private const val CLOCK_SKEW_TOLERANCE_MS = 2_000L
-    }
 }
