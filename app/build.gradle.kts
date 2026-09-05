@@ -11,8 +11,8 @@ android {
         applicationId = "com.github.ftpmirror"
         minSdk = 24
         targetSdk = 34
-        versionCode = 6
-        versionName = "3.0.0"
+        versionCode = 7
+        versionName = "3.1.0-dev"
     }
 
     buildTypes {
@@ -45,4 +45,6 @@ dependencies {
     implementation("com.github.mwiede:jsch:2.28.7")
     implementation("eu.agno3.jcifs:jcifs-ng:2.1.10")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    testImplementation("junit:junit:4.13.2")
 }
