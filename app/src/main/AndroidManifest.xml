@@ -10,9 +10,9 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@android:drawable/ic_menu_upload"
+        android:icon="@drawable/ic_stone_sync_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@android:drawable/ic_menu_upload"
+        android:roundIcon="@drawable/ic_stone_sync_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.FtpMirror"
         android:usesCleartextTraffic="true"
@@ -37,5 +37,10 @@
             android:name=".MirrorForegroundService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
     </application>
 </manifest>
