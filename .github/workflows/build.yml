@@ -1,15 +1,19 @@
-name: Build Debug APK
+name: Android Verification
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, stone-sync-development ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -24,29 +28,34 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Accept Android licenses
-        run: |
-          yes | sdkmanager --licenses || true
+      - name: Accept Android licences
+        run: yes | sdkmanager --licenses || true
 
       - name: Install Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
 
-      - name: Generate Gradle Wrapper
+      - name: Ensure wrapper
         run: |
           if [ ! -f gradlew ]; then
             gradle wrapper --gradle-version 8.7
-            chmod +x gradlew
           fi
+          chmod +x gradlew
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace --info
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Lint
+        run: ./gradlew lintDebug --stacktrace
+
+      - name: Assemble debug APK
+        run: ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: app-debug
+          name: stone-sync-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
