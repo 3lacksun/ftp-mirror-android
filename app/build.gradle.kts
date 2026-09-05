@@ -40,4 +40,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("androidx.biometric:biometric:1.1.0")
+
+    // Direct user-assigned remote endpoints.
+    implementation("com.github.mwiede:jsch:2.28.7")
+    implementation("eu.agno3.jcifs:jcifs-ng:2.1.10")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }

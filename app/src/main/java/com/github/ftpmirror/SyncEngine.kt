@@ -4,24 +4,21 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
-import org.apache.commons.net.ftp.FTPClient
-import org.apache.commons.net.ftp.FTPFile
 import java.io.InputStream
 import java.io.OutputStream
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import kotlin.math.abs
 
 class SyncEngine(private val context: Context) {
 
-    private val tag = "SyncEngine"
+    private val tag = "StoneSyncEngine"
 
     data class Result(
         var uploaded: Int = 0,
         var downloaded: Int = 0,
         var deleted: Int = 0,
         var skipped: Int = 0,
-        var failed: Int = 0
+        var failed: Int = 0,
+        var conflicts: Int = 0
     )
 
     fun syncAllEnabled(): Result {
@@ -30,21 +27,21 @@ class SyncEngine(private val context: Context) {
         store.raw().edit().putBoolean("is_running", true).putBoolean("cancel_requested", false).apply()
         try {
             for (pair in store.list()) {
-                if (!pair.enabled) continue
-                if (store.raw().getBoolean("cancel_requested", false)) break
-                val r = syncPair(pair)
+                if (!pair.enabled || cancelled(store)) continue
+                val r = syncPair(pair, store)
                 total.uploaded += r.uploaded
                 total.downloaded += r.downloaded
                 total.deleted += r.deleted
                 total.skipped += r.skipped
                 total.failed += r.failed
+                total.conflicts += r.conflicts
             }
         } finally {
             val ts = System.currentTimeMillis()
-            val fmt = SimpleDateFormat("dd MMM HH:mm", Locale.getDefault())
-            val line = "${fmt.format(Date(ts))} — ↑${total.uploaded} ↓${total.downloaded} ✗${total.failed}"
+            val line = java.text.SimpleDateFormat("dd MMM HH:mm", java.util.Locale.getDefault()).format(java.util.Date(ts)) +
+                " — ↑${total.uploaded} ↓${total.downloaded} !${total.conflicts} ✗${total.failed}"
             val prev = store.raw().getString("run_history", "") ?: ""
-            val lines = (listOf(line) + prev.lines().filter { it.isNotBlank() }).take(12)
+            val lines = (listOf(line) + prev.lines().filter { it.isNotBlank() }).take(20)
             store.raw().edit()
                 .putBoolean("is_running", false)
                 .putLong("last_run_ts", ts)
@@ -52,197 +49,268 @@ class SyncEngine(private val context: Context) {
                 .putInt("last_downloaded", total.downloaded)
                 .putInt("last_failed", total.failed)
                 .putInt("last_skipped", total.skipped)
+                .putInt("last_conflicts", total.conflicts)
                 .putString("run_history", lines.joinToString("\n"))
                 .apply()
         }
         return total
     }
 
-    fun syncPair(pair: SyncPair): Result {
+    fun syncPair(pair: SyncPair): Result = syncPair(pair, PairStore(context))
+
+    private fun syncPair(pair: SyncPair, store: PairStore): Result {
         val result = Result()
-        if (pair.host.isBlank() || pair.treeUri.isBlank()) {
+        if (pair.treeUri.isBlank()) {
             result.failed++
             return result
         }
         val root = DocumentFile.fromTreeUri(context, Uri.parse(pair.treeUri))
-        if (root == null) {
+        if (root == null || !root.exists() || !root.isDirectory) {
             result.failed++
             return result
         }
 
-        val connect = FtpHelper.connect(pair.host, pair.port, pair.username, pair.password, pair.passive)
-        val client = connect.client
-        if (!connect.success || client == null) {
-            Log.e(tag, "Connect failed for ${pair.name}: ${connect.message}")
-            result.failed++
-            return result
-        }
-
-        try {
-            FtpHelper.ensureDir(client, pair.remoteDir)
-            when (pair.mode) {
-                SyncPair.MODE_UPLOAD_DELETE -> uploadSide(root, client, pair.remoteDir, true, result)
-                SyncPair.MODE_DOWNLOAD_DELETE -> downloadSide(root, client, pair.remoteDir, true, result)
-                else -> {
-                    uploadSide(root, client, pair.remoteDir, false, result)
-                    downloadSide(root, client, pair.remoteDir, false, result)
-                }
-            }
+        val session = try {
+            RemoteSessionFactory.connect(pair)
         } catch (e: Exception) {
-            Log.e(tag, "Sync failed ${pair.name}", e)
+            Log.e(tag, "Connect failed for ${pair.name}", e)
             result.failed++
-        } finally {
-            FtpHelper.disconnectQuietly(client)
+            return result
+        }
+
+        session.use {
+            try {
+                val remoteRoot = RemotePaths.normalise(pair.remoteDir)
+                session.ensureDir(remoteRoot)
+                when (pair.mode) {
+                    SyncPair.MODE_UPLOAD_DELETE -> uploadTree(root, session, remoteRoot, true, result, store)
+                    SyncPair.MODE_DOWNLOAD_DELETE -> downloadTree(root, session, remoteRoot, true, result, store)
+                    else -> syncTwoWay(root, session, remoteRoot, pair, result, store)
+                }
+            } catch (e: Exception) {
+                Log.e(tag, "Sync failed for ${pair.name}", e)
+                result.failed++
+            }
         }
         return result
     }
 
-    private fun uploadSide(
+    private fun syncTwoWay(
         localDir: DocumentFile,
-        client: FTPClient,
+        remote: RemoteSession,
         remoteDir: String,
-        deleteAfter: Boolean,
-        result: Result
+        pair: SyncPair,
+        result: Result,
+        store: PairStore
     ) {
-        FtpHelper.ensureDir(client, remoteDir)
-        val remoteNames = remoteFileMap(client, remoteDir)
-        val children = localDir.listFiles() ?: return
-        for (child in children) {
-            val name = child.name ?: continue
-            if (child.isDirectory) {
-                val nextRemote = joinRemote(remoteDir, name)
-                client.makeDirectory(nextRemote)
-                uploadSide(child, client, nextRemote, deleteAfter, result)
-            } else if (child.isFile) {
-                if (remoteNames.containsKey(name)) {
-                    result.skipped++
-                    if (deleteAfter) child.delete()
-                    continue
-                }
-                val input: InputStream? = context.contentResolver.openInputStream(child.uri)
-                if (input == null) {
-                    result.failed++
-                    continue
-                }
-                try {
-                    client.changeWorkingDirectory(remoteDir)
-                    val ok = client.storeFile(name, input)
-                    if (ok) {
-                        result.uploaded++
-                        if (deleteAfter) child.delete()
+        if (cancelled(store)) return
+        remote.ensureDir(remoteDir)
+
+        val localByName = localDir.listFiles().mapNotNull { file -> file.name?.let { it to file } }.toMap()
+        val remoteByName = remote.list(remoteDir).associateBy { it.name }
+        val names = (localByName.keys + remoteByName.keys).toSortedSet()
+
+        for (name in names) {
+            if (cancelled(store)) return
+            val local = localByName[name]
+            val remoteEntry = remoteByName[name]
+            when {
+                local != null && remoteEntry == null -> {
+                    if (local.isDirectory) {
+                        val childRemote = RemotePaths.join(remoteDir, name)
+                        remote.ensureDir(childRemote)
+                        uploadTree(local, remote, childRemote, false, result, store)
                     } else {
-                        result.failed++
+                        uploadFile(local, remote, RemotePaths.join(remoteDir, name), false, result)
                     }
-                } catch (e: Exception) {
-                    Log.e(tag, "Upload $name", e)
-                    result.failed++
-                } finally {
-                    try {
-                        input.close()
-                    } catch (_: Exception) {
+                }
+
+                local == null && remoteEntry != null -> {
+                    if (remoteEntry.isDirectory) {
+                        val child = localDir.findFile(name)?.takeIf { it.isDirectory }
+                            ?: localDir.createDirectory(name)
+                        if (child == null) result.failed++
+                        else downloadTree(child, remote, remoteEntry.path, false, result, store)
+                    } else {
+                        downloadFile(localDir, null, name, remote, remoteEntry, false, result)
+                    }
+                }
+
+                local != null && remoteEntry != null -> {
+                    if (local.isDirectory && remoteEntry.isDirectory) {
+                        syncTwoWay(local, remote, remoteEntry.path, pair, result, store)
+                    } else if (local.isFile && !remoteEntry.isDirectory) {
+                        reconcileFile(localDir, local, remote, remoteEntry, pair, result)
+                    } else {
+                        // File/directory type changes are ambiguous and must not be destructive by default.
+                        result.conflicts++
                     }
                 }
             }
         }
     }
 
-    private fun downloadSide(
+    private fun reconcileFile(
+        parent: DocumentFile,
+        local: DocumentFile,
+        remote: RemoteSession,
+        remoteEntry: RemoteEntry,
+        pair: SyncPair,
+        result: Result
+    ) {
+        val localSize = local.length()
+        if (localSize == remoteEntry.size) {
+            result.skipped++
+            return
+        }
+
+        when (ConflictPolicy.fromStored(pair.conflictPolicy)) {
+            ConflictPolicy.LOCAL_WINS -> uploadFile(local, remote, remoteEntry.path, false, result)
+            ConflictPolicy.REMOTE_WINS -> downloadFile(parent, local, remoteEntry.name, remote, remoteEntry, false, result)
+            ConflictPolicy.NEWEST_WINS -> {
+                val localModified = local.lastModified()
+                val remoteModified = remoteEntry.modifiedMillis
+                if (localModified <= 0L || remoteModified == null || remoteModified <= 0L) {
+                    result.conflicts++
+                    return
+                }
+                val delta = localModified - remoteModified
+                when {
+                    delta > CLOCK_SKEW_TOLERANCE_MS -> uploadFile(local, remote, remoteEntry.path, false, result)
+                    delta < -CLOCK_SKEW_TOLERANCE_MS ->
+                        downloadFile(parent, local, remoteEntry.name, remote, remoteEntry, false, result)
+                    abs(delta) <= CLOCK_SKEW_TOLERANCE_MS -> result.conflicts++
+                }
+            }
+        }
+    }
+
+    private fun uploadTree(
         localDir: DocumentFile,
-        client: FTPClient,
+        remote: RemoteSession,
         remoteDir: String,
+        deleteAfter: Boolean,
+        result: Result,
+        store: PairStore
+    ) {
+        if (cancelled(store)) return
+        remote.ensureDir(remoteDir)
+        val remoteByName = remote.list(remoteDir).associateBy { it.name }
+        for (child in localDir.listFiles()) {
+            if (cancelled(store)) return
+            val name = child.name ?: continue
+            val path = RemotePaths.join(remoteDir, name)
+            if (child.isDirectory) {
+                remote.ensureDir(path)
+                uploadTree(child, remote, path, deleteAfter, result, store)
+            } else if (child.isFile) {
+                val existing = remoteByName[name]
+                if (existing != null && !existing.isDirectory && existing.size == child.length()) {
+                    result.skipped++
+                    if (deleteAfter && child.delete()) result.deleted++
+                } else {
+                    uploadFile(child, remote, path, deleteAfter, result)
+                }
+            }
+        }
+    }
+
+    private fun downloadTree(
+        localDir: DocumentFile,
+        remote: RemoteSession,
+        remoteDir: String,
+        deleteAfter: Boolean,
+        result: Result,
+        store: PairStore
+    ) {
+        if (cancelled(store)) return
+        val remoteEntries = remote.list(remoteDir)
+        val localByName = localDir.listFiles().mapNotNull { file -> file.name?.let { it to file } }.toMap()
+        for (entry in remoteEntries) {
+            if (cancelled(store)) return
+            if (entry.isDirectory) {
+                val child = localByName[entry.name]?.takeIf { it.isDirectory }
+                    ?: localDir.createDirectory(entry.name)
+                if (child == null) result.failed++
+                else downloadTree(child, remote, entry.path, deleteAfter, result, store)
+            } else {
+                val existing = localByName[entry.name]?.takeIf { it.isFile }
+                if (existing != null && existing.length() == entry.size) {
+                    result.skipped++
+                    if (deleteAfter) {
+                        try {
+                            remote.delete(entry.path)
+                            result.deleted++
+                        } catch (e: Exception) {
+                            Log.e(tag, "Remote delete failed ${entry.path}", e)
+                            result.failed++
+                        }
+                    }
+                } else {
+                    downloadFile(localDir, existing, entry.name, remote, entry, deleteAfter, result)
+                }
+            }
+        }
+    }
+
+    private fun uploadFile(
+        local: DocumentFile,
+        remote: RemoteSession,
+        remotePath: String,
         deleteAfter: Boolean,
         result: Result
     ) {
-        val files = try {
-            FtpHelper.list(client, remoteDir)
-        } catch (e: Exception) {
+        val input: InputStream = context.contentResolver.openInputStream(local.uri) ?: run {
             result.failed++
             return
         }
-        val localNames = localNameSet(localDir)
-        for (file in files) {
-            val name = file.name ?: continue
-            if (name == "." || name == "..") continue
-            if (file.isDirectory) {
-                var nextLocal = localDir.findFile(name)
-                if (nextLocal == null || !nextLocal.isDirectory) {
-                    nextLocal = localDir.createDirectory(name)
-                }
-                if (nextLocal != null) {
-                    downloadSide(nextLocal, client, joinRemote(remoteDir, name), deleteAfter, result)
-                }
-            } else {
-                if (localNames.contains(name)) {
-                    result.skipped++
-                    if (deleteAfter) {
-                        client.changeWorkingDirectory(remoteDir)
-                        client.deleteFile(name)
-                        result.deleted++
-                    }
-                    continue
-                }
-                val created = localDir.createFile("application/octet-stream", name)
-                if (created == null) {
-                    result.failed++
-                    continue
-                }
-                val out: OutputStream? = context.contentResolver.openOutputStream(created.uri)
-                if (out == null) {
-                    result.failed++
-                    continue
-                }
-                try {
-                    client.changeWorkingDirectory(remoteDir)
-                    val ok = client.retrieveFile(name, out)
-                    if (ok) {
-                        result.downloaded++
-                        if (deleteAfter) {
-                            client.deleteFile(name)
-                            result.deleted++
-                        }
-                    } else {
-                        result.failed++
-                        created.delete()
-                    }
-                } catch (e: Exception) {
-                    Log.e(tag, "Download $name", e)
-                    result.failed++
-                } finally {
-                    try {
-                        out.close()
-                    } catch (_: Exception) {
-                    }
-                }
+        try {
+            input.use { remote.upload(remotePath, it) }
+            result.uploaded++
+            if (deleteAfter && local.delete()) result.deleted++
+        } catch (e: Exception) {
+            Log.e(tag, "Upload failed $remotePath", e)
+            result.failed++
+        }
+    }
+
+    private fun downloadFile(
+        parent: DocumentFile,
+        existing: DocumentFile?,
+        name: String,
+        remote: RemoteSession,
+        remoteEntry: RemoteEntry,
+        deleteAfter: Boolean,
+        result: Result
+    ) {
+        val target = existing ?: parent.createFile("application/octet-stream", name)
+        if (target == null) {
+            result.failed++
+            return
+        }
+        val output: OutputStream = context.contentResolver.openOutputStream(target.uri, "wt") ?: run {
+            if (existing == null) target.delete()
+            result.failed++
+            return
+        }
+        try {
+            output.use { remote.download(remoteEntry.path, it) }
+            result.downloaded++
+            if (deleteAfter) {
+                remote.delete(remoteEntry.path)
+                result.deleted++
             }
+        } catch (e: Exception) {
+            Log.e(tag, "Download failed ${remoteEntry.path}", e)
+            if (existing == null) target.delete()
+            result.failed++
         }
     }
 
-    private fun remoteFileMap(client: FTPClient, remoteDir: String): Map<String, FTPFile> {
-        val map = mutableMapOf<String, FTPFile>()
-        val files = try {
-            FtpHelper.list(client, remoteDir)
-        } catch (_: Exception) {
-            return map
-        }
-        for (f in files) {
-            val n = f.name ?: continue
-            if (n == "." || n == "..") continue
-            if (f.isFile) map[n] = f
-        }
-        return map
-    }
+    private fun cancelled(store: PairStore): Boolean =
+        store.raw().getBoolean("cancel_requested", false)
 
-    private fun localNameSet(dir: DocumentFile): Set<String> {
-        val set = mutableSetOf<String>()
-        val files = dir.listFiles() ?: return set
-        for (f in files) {
-            val n = f.name ?: continue
-            set.add(n)
-        }
-        return set
-    }
-
-    private fun joinRemote(base: String, name: String): String {
-        return if (base.endsWith("/")) "$base$name" else "$base/$name"
+    companion object {
+        private const val CLOCK_SKEW_TOLERANCE_MS = 2_000L
     }
 }
