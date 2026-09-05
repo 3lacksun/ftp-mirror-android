@@ -118,7 +118,13 @@ class MirrorWorker(
                 .setInitialDelay(30, TimeUnit.SECONDS)
                 .addTag("stone_sync_periodic")
                 .build()
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            val manager = WorkManager.getInstance(context)
+
+            // An installed FTP Mirror build may already have the pre-rebrand periodic job.
+            // Remove it before arming STONE//SYNC so an upgrade cannot run duplicate schedules.
+            manager.cancelUniqueWork("ftp_mirror")
+            manager.cancelAllWorkByTag("ftp_mirror_periodic")
+            manager.enqueueUniquePeriodicWork(
                 "stone_sync",
                 ExistingPeriodicWorkPolicy.UPDATE,
                 request
@@ -126,12 +132,15 @@ class MirrorWorker(
         }
 
         fun cancelAll(context: Context) {
-            WorkManager.getInstance(context).cancelUniqueWork("stone_sync")
-            WorkManager.getInstance(context).cancelAllWorkByTag("stone_sync_one_time")
+            val manager = WorkManager.getInstance(context)
+            manager.cancelUniqueWork("stone_sync")
+            manager.cancelAllWorkByTag("stone_sync_one_time")
+            manager.cancelAllWorkByTag("stone_sync_periodic")
 
             // Clean up pre-rename work identifiers from installed FTP Mirror builds.
-            WorkManager.getInstance(context).cancelUniqueWork("ftp_mirror")
-            WorkManager.getInstance(context).cancelAllWorkByTag("ftp_mirror_one_time")
+            manager.cancelUniqueWork("ftp_mirror")
+            manager.cancelAllWorkByTag("ftp_mirror_one_time")
+            manager.cancelAllWorkByTag("ftp_mirror_periodic")
         }
     }
 }
