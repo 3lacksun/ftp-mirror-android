@@ -11,34 +11,36 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.apache.commons.net.ftp.FTPClient
-import org.apache.commons.net.ftp.FTPFile
 
 class RemoteExplorerActivity : AppCompatActivity() {
 
     private lateinit var container: LinearLayout
     private lateinit var tvPath: TextView
     private val stack = ArrayDeque<String>()
-    private var client: FTPClient? = null
+    private var session: RemoteSession? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_explorer)
 
         findViewById<MaterialToolbar>(R.id.toolbar).apply {
-            title = "Remote folder"
+            title = "Remote endpoint"
             setNavigationOnClickListener { finish() }
         }
         container = findViewById(R.id.listContainer)
         tvPath = findViewById(R.id.tvPath)
 
         val start = intent.getStringExtra("remote_dir") ?: "/"
-        stack.addLast(start)
+        stack.addLast(RemotePaths.normalise(start))
         connectAndLoad()
     }
 
     override fun onDestroy() {
-        FtpHelper.disconnectQuietly(client)
+        try {
+            session?.close()
+        } catch (_: Exception) {
+        }
+        session = null
         super.onDestroy()
     }
 
@@ -53,22 +55,39 @@ class RemoteExplorerActivity : AppCompatActivity() {
     }
 
     private fun connectAndLoad() {
-        tvPath.text = "Connecting…"
-        val host = intent.getStringExtra("host") ?: return finish()
-        val port = intent.getIntExtra("port", 21)
-        val user = intent.getStringExtra("username") ?: ""
-        val pass = intent.getStringExtra("password") ?: ""
-        val passive = intent.getBooleanExtra("passive", true)
+        tvPath.text = "Connecting directly…"
+        val protocol = RemoteProtocol.fromStored(intent.getStringExtra("protocol"))
+        val pair = SyncPair(
+            id = "explorer",
+            name = "Remote explorer",
+            treeUri = "",
+            host = intent.getStringExtra("host").orEmpty(),
+            port = intent.getIntExtra("port", protocol.defaultPort),
+            username = intent.getStringExtra("username").orEmpty(),
+            password = intent.getStringExtra("password").orEmpty(),
+            remoteDir = stack.last(),
+            passive = intent.getBooleanExtra("passive", true),
+            mode = SyncPair.MODE_TWO_WAY,
+            enabled = true,
+            protocol = protocol.storedValue,
+            hostKeySha256 = intent.getStringExtra("host_key_sha256").orEmpty()
+        )
+
         CoroutineScope(Dispatchers.IO).launch {
-            val r = FtpHelper.connect(host, port, user, pass, passive)
+            val opened = runCatching { RemoteSessionFactory.connect(pair) }
             withContext(Dispatchers.Main) {
-                if (!r.success || r.client == null) {
-                    Toast.makeText(this@RemoteExplorerActivity, r.message, Toast.LENGTH_LONG).show()
+                opened.onSuccess {
+                    session = it
+                    findViewById<MaterialToolbar>(R.id.toolbar).subtitle = protocol.label
+                    loadCurrent()
+                }.onFailure {
+                    Toast.makeText(
+                        this@RemoteExplorerActivity,
+                        it.message ?: "Unable to connect",
+                        Toast.LENGTH_LONG
+                    ).show()
                     finish()
-                    return@withContext
                 }
-                client = r.client
-                loadCurrent()
             }
         }
     }
@@ -76,30 +95,38 @@ class RemoteExplorerActivity : AppCompatActivity() {
     private fun loadCurrent() {
         val path = stack.last()
         tvPath.text = path
-        val c = client ?: return
+        val remote = session ?: return
         CoroutineScope(Dispatchers.IO).launch {
-            val files = try {
-                FtpHelper.list(c, path).toList()
-                    .filter { it.name != "." && it.name != ".." }
-                    .sortedWith(compareByDescending<FTPFile> { it.isDirectory }.thenBy { it.name ?: "" })
-            } catch (e: Exception) {
-                emptyList()
+            val result = runCatching {
+                remote.list(path)
+                    .sortedWith(compareByDescending<RemoteEntry> { it.isDirectory }.thenBy { it.name.lowercase() })
             }
             withContext(Dispatchers.Main) {
                 container.removeAllViews()
+                result.onFailure {
+                    Toast.makeText(
+                        this@RemoteExplorerActivity,
+                        it.message ?: "Unable to list remote folder",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                val files = result.getOrDefault(emptyList())
                 if (files.isEmpty()) {
-                    val t = TextView(this@RemoteExplorerActivity)
-                    t.text = "Empty or unreadable folder"
-                    t.setTextColor(getColor(R.color.md_theme_on_surface_variant))
-                    container.addView(t)
+                    val text = TextView(this@RemoteExplorerActivity)
+                    text.text = if (result.isFailure) "Folder unavailable" else "Empty folder"
+                    text.setTextColor(getColor(R.color.md_theme_on_surface_variant))
+                    container.addView(text)
                     return@withContext
                 }
-                for (f in files) {
-                    val label = if (f.isDirectory) "📁  ${f.name}" else "📄  ${f.name}  (${f.size} B)"
+                for (entry in files) {
+                    val label = if (entry.isDirectory) {
+                        "📁  ${entry.name}"
+                    } else {
+                        "📄  ${entry.name}  (${entry.size} B)"
+                    }
                     container.addView(row(label) {
-                        if (f.isDirectory) {
-                            val next = if (path.endsWith("/")) "$path${f.name}" else "$path/${f.name}"
-                            stack.addLast(next)
+                        if (entry.isDirectory) {
+                            stack.addLast(entry.path)
                             loadCurrent()
                         }
                     })

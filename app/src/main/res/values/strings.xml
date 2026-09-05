@@ -1,33 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">FTP Mirror</string>
+    <string name="app_name">STONE//SYNC</string>
     <string name="select_folder">Choose folder</string>
     <string name="save_schedule">Save schedule</string>
     <string name="run_now">Sync now</string>
     <string name="cancel_run">Cancel</string>
-    <string name="test_connection">Test connection</string>
+    <string name="test_connection">Test direct connection</string>
     <string name="host">Host or IP address</string>
     <string name="port">Port</string>
     <string name="username">Username</string>
     <string name="password">Password</string>
-    <string name="remote_dir">Remote directory</string>
+    <string name="remote_dir">Remote path</string>
     <string name="delete_after">Delete after transfer</string>
-    <string name="passive_mode">Passive mode</string>
-    <string name="interval">Schedule</string>
+    <string name="passive_mode">Passive FTP data mode</string>
+    <string name="interval">Background schedule</string>
     <string name="include_patterns">Include patterns</string>
     <string name="exclude_patterns">Exclude patterns</string>
-    <string name="status_idle">Ready</string>
-    <string name="status_running">Syncing…</string>
+    <string name="status_idle">SYSTEM READY</string>
+    <string name="status_running">SYNC ACTIVE…</string>
     <string name="use_biometric">Unlock with biometrics</string>
-    <string name="biometric_title">Unlock FTP Mirror</string>
+    <string name="biometric_title">Unlock STONE//SYNC</string>
     <string name="biometric_subtitle">Use your fingerprint or face</string>
-    <string name="pin_setup_title">Create your PIN</string>
-    <string name="pin_setup_subtitle">You’ll use this 6-digit PIN every time you open the app</string>
-    <string name="pin_enter_title">Welcome back</string>
+    <string name="pin_setup_title">Establish access PIN</string>
+    <string name="pin_setup_subtitle">Create the 6-digit PIN used to unlock STONE//SYNC</string>
+    <string name="pin_enter_title">Secure access</string>
     <string name="pin_enter_subtitle">Enter your 6-digit PIN to continue</string>
     <string name="pin_confirm_hint">Confirm PIN</string>
     <string name="continue_btn">Continue</string>
-    <string name="no_history">No runs yet — tap Sync now</string>
+    <string name="no_history">No sync operations recorded</string>
     <string-array name="interval_labels">
         <item>Every 15 minutes</item>
         <item>Every 30 minutes</item>

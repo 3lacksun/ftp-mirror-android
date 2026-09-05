@@ -11,60 +11,240 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         app:navigationIcon="?attr/homeAsUpIndicator"
-        app:title="Edit pair" />
+        app:title="STONE//SYNC endpoint" />
 
-    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:padding="16dp">
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
-            <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:hint="Pair name" android:layout_marginBottom="10dp" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etName" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="COVERT SYSTEMS DATA LABORATORY"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.12"
+                android:textColor="@color/md_theme_outline"
+                android:layout_marginBottom="14dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Endpoint name"
+                android:layout_marginBottom="10dp"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <TextView android:id="@+id/tvCurrentFolder" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="No folder selected" android:textSize="14sp" android:layout_marginBottom="8dp" />
+            <TextView
+                android:id="@+id/tvCurrentFolder"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="No folder selected"
+                android:textSize="14sp"
+                android:layout_marginBottom="8dp" />
 
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnSelectFolder" android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="Choose local folder" style="@style/Widget.Material3.Button.TonalButton" android:layout_marginBottom="8dp" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSelectFolder"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Choose local folder"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_marginBottom="8dp" />
 
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="12dp">
-                <com.google.android.material.button.MaterialButton android:id="@+id/btnBrowseLocal" android:layout_width="0dp" android:layout_height="wrap_content"
-                    android:layout_weight="1" android:text="Browse local" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_marginEnd="6dp" />
-                <com.google.android.material.button.MaterialButton android:id="@+id/btnBrowseRemote" android:layout_width="0dp" android:layout_height="wrap_content"
-                    android:layout_weight="1" android:text="Browse remote" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_marginStart="6dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="14dp">
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnBrowseLocal"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Browse local"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_marginEnd="6dp" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnBrowseRemote"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Browse remote"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_marginStart="6dp" />
             </LinearLayout>
 
-            <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:hint="@string/host" android:layout_marginBottom="8dp" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etHost" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textUri" />
-            </com.google.android.material.textfield.TextInputLayout>
-            <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:hint="@string/port" android:layout_marginBottom="8dp" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etPort" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number" android:text="21" />
-            </com.google.android.material.textfield.TextInputLayout>
-            <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:hint="@string/username" android:layout_marginBottom="8dp" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etUser" android:layout_width="match_parent" android:layout_height="wrap_content" />
-            </com.google.android.material.textfield.TextInputLayout>
-            <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:hint="@string/password" android:layout_marginBottom="8dp" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etPass" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textPassword" />
-            </com.google.android.material.textfield.TextInputLayout>
-            <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:hint="@string/remote_dir" android:layout_marginBottom="12dp" style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-                <com.google.android.material.textfield.TextInputEditText android:id="@+id/etRemoteDir" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="/mirror" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Remote protocol"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+            <Spinner
+                android:id="@+id/spinnerProtocol"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginBottom="12dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/host"
+                android:layout_marginBottom="8dp"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etHost"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textUri" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Sync mode" android:textSize="13sp" android:layout_marginBottom="4dp" />
-            <Spinner android:id="@+id/spinnerMode" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginBottom="12dp" />
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/port"
+                android:layout_marginBottom="8dp"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etPort"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:text="21" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.switchmaterial.SwitchMaterial android:id="@+id/switchPassive" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/passive_mode" android:checked="true" />
-            <com.google.android.material.switchmaterial.SwitchMaterial android:id="@+id/switchEnabled" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Enabled" android:checked="true" android:layout_marginBottom="12dp" />
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/username"
+                android:layout_marginBottom="8dp"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etUser"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textNoSuggestions" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnTest" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/test_connection" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_marginBottom="8dp" />
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnSave" android:layout_width="match_parent" android:layout_height="52dp" android:text="Save pair" app:cornerRadius="14dp" android:layout_marginBottom="8dp" />
-            <com.google.android.material.button.MaterialButton android:id="@+id/btnDelete" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Delete pair" style="@style/Widget.Material3.Button.TextButton" />
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/password"
+                android:layout_marginBottom="8dp"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etPass"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPassword" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/hostKeyLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="SFTP host key SHA-256"
+                android:visibility="gone"
+                android:layout_marginBottom="8dp"
+                app:helperText="Required. Example: SHA256:AbCd…"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etHostKey"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textNoSuggestions"
+                    android:fontFamily="monospace" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/remote_dir"
+                android:layout_marginBottom="12dp"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etRemoteDir"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="/mirror"
+                    android:inputType="textUri" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Sync mode"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+            <Spinner
+                android:id="@+id/spinnerMode"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Two-way conflict policy"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+            <Spinner
+                android:id="@+id/spinnerConflict"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginBottom="12dp" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchPassive"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/passive_mode"
+                android:checked="true" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchEnabled"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Enabled"
+                android:checked="true"
+                android:layout_marginBottom="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnTest"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Test direct connection"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSave"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="Save endpoint"
+                app:cornerRadius="14dp"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDelete"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Delete endpoint"
+                style="@style/Widget.Material3.Button.TextButton" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

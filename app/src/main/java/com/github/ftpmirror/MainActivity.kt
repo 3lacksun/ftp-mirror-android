@@ -2,7 +2,6 @@ package com.github.ftpmirror
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.Spinner
@@ -32,7 +31,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         store = PairStore(this)
 
-        findViewById<MaterialToolbar>(R.id.toolbar).title = "FTP Mirror"
+        findViewById<MaterialToolbar>(R.id.toolbar).apply {
+            title = "STONE//SYNC"
+            subtitle = "COVERT SYSTEMS DATA LABORATORY"
+        }
         tvStatus = findViewById(R.id.tvStatus)
         tvLastRun = findViewById(R.id.tvLastRun)
         tvStats = findViewById(R.id.tvStats)
@@ -49,19 +51,31 @@ class MainActivity : AppCompatActivity() {
         spinnerInterval.setSelection(idx)
 
         findViewById<MaterialButton>(R.id.btnAddPair).setOnClickListener {
-            val p = store.newPair()
-            store.upsert(p)
-            openPair(p.id)
+            val pair = store.newPair()
+            store.upsert(pair)
+            openPair(pair.id)
         }
         findViewById<MaterialButton>(R.id.btnRunNow).setOnClickListener {
-            if (store.list().none { it.enabled }) {
-                Toast.makeText(this, "Add and enable a pair first", Toast.LENGTH_LONG).show()
+            val enabled = store.list().filter { it.enabled }
+            if (enabled.isEmpty()) {
+                Toast.makeText(this, "Add and enable an endpoint first", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+            val invalid = enabled.firstNotNullOfOrNull { pair ->
+                runCatching { EndpointValidator.validate(pair) }.exceptionOrNull()?.let { pair.name to it }
+            }
+            if (invalid != null) {
+                Toast.makeText(
+                    this,
+                    "${invalid.first}: ${invalid.second.message ?: "invalid endpoint"}",
+                    Toast.LENGTH_LONG
+                ).show()
                 return@setOnClickListener
             }
             store.raw().edit().putBoolean("cancel_requested", false).apply()
             MirrorWorker.enqueueOneTime(this)
             tvStatus.text = getString(R.string.status_running)
-            Toast.makeText(this, "Sync started", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Sync queued", Toast.LENGTH_SHORT).show()
         }
         findViewById<MaterialButton>(R.id.btnCancel).setOnClickListener {
             store.raw().edit().putBoolean("cancel_requested", true).apply()
@@ -73,7 +87,7 @@ class MainActivity : AppCompatActivity() {
             val minutes = intervalMinutes.getOrElse(spinnerInterval.selectedItemPosition) { 15L }
             store.setIntervalMin(minutes)
             MirrorWorker.schedule(this, minutes)
-            Toast.makeText(this, "Scheduled every $minutes min", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Background sync every $minutes min", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -84,9 +98,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openPair(id: String) {
-        val i = Intent(this, PairEditActivity::class.java)
-        i.putExtra("pair_id", id)
-        startActivity(i)
+        startActivity(Intent(this, PairEditActivity::class.java).putExtra("pair_id", id))
     }
 
     private fun renderPairs() {
@@ -94,13 +106,13 @@ class MainActivity : AppCompatActivity() {
         val pairs = store.list()
         if (pairs.isEmpty()) {
             val empty = TextView(this)
-            empty.text = "No folder pairs yet. Tap Add pair."
+            empty.text = "No sync endpoints yet. Tap Add endpoint."
             empty.setTextColor(getColor(R.color.md_theme_on_surface_variant))
             empty.textSize = 14f
             pairContainer.addView(empty)
             return
         }
-        for (p in pairs) {
+        for (pair in pairs) {
             val card = MaterialCardView(this)
             val lp = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -120,14 +132,16 @@ class MainActivity : AppCompatActivity() {
             inner.setPadding(pad, pad, pad, pad)
 
             val title = TextView(this)
-            title.text = p.name
+            title.text = pair.name
             title.textSize = 16f
             title.setTextColor(getColor(R.color.md_theme_on_surface))
             title.setTypeface(title.typeface, android.graphics.Typeface.BOLD)
 
+            val protocol = RemoteProtocol.fromStored(pair.protocol)
             val sub = TextView(this)
-            val onOff = if (p.enabled) "On" else "Off"
-            sub.text = "$onOff · ${SyncPair.modeLabel(p.mode)}\n${p.host}${p.remoteDir}"
+            val onOff = if (pair.enabled) "ARMED" else "STANDBY"
+            val authority = if (pair.host.isBlank()) "Not configured" else "${pair.host}:${pair.port}${pair.remoteDir}"
+            sub.text = "$onOff · ${protocol.label} · ${SyncPair.modeLabel(pair.mode)}\n$authority"
             sub.textSize = 13f
             sub.setTextColor(getColor(R.color.md_theme_on_surface_variant))
             val top = (6 * resources.displayMetrics.density).toInt()
@@ -136,27 +150,28 @@ class MainActivity : AppCompatActivity() {
             inner.addView(title)
             inner.addView(sub)
             card.addView(inner)
-            card.setOnClickListener { openPair(p.id) }
+            card.setOnClickListener { openPair(pair.id) }
             pairContainer.addView(card)
         }
     }
 
     private fun refreshStatus() {
-        val p = store.raw()
-        val running = p.getBoolean("is_running", false)
+        val prefs = store.raw()
+        val running = prefs.getBoolean("is_running", false)
         tvStatus.text = if (running) getString(R.string.status_running) else getString(R.string.status_idle)
-        val lastTs = p.getLong("last_run_ts", 0L)
+        val lastTs = prefs.getLong("last_run_ts", 0L)
         tvLastRun.text = if (lastTs > 0) {
             val fmt = SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault())
             "Last run: ${fmt.format(Date(lastTs))}"
         } else {
             "Last run: Never"
         }
-        val up = p.getInt("last_uploaded", 0)
-        val down = p.getInt("last_downloaded", 0)
-        val fail = p.getInt("last_failed", 0)
-        tvStats.text = "↑ $up uploaded   ↓ $down downloaded   ✗ $fail failed"
-        val history = p.getString("run_history", "") ?: ""
+        val up = prefs.getInt("last_uploaded", 0)
+        val down = prefs.getInt("last_downloaded", 0)
+        val fail = prefs.getInt("last_failed", 0)
+        val conflicts = prefs.getInt("last_conflicts", 0)
+        tvStats.text = "↑ $up   ↓ $down   ! $conflicts conflicts   ✗ $fail"
+        val history = prefs.getString("run_history", "") ?: ""
         tvHistory.text = if (history.isBlank()) getString(R.string.no_history) else history
     }
 }

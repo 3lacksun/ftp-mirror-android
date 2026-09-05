@@ -16,25 +16,25 @@ import kotlinx.coroutines.launch
 
 class MirrorForegroundService : Service() {
 
-    private val channelId = "ftp_mirror_channel"
+    private val channelId = "stone_sync_channel"
     private val notificationId = 1001
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(notificationId, buildNotification("Starting scheduled sync…", true))
+        startForeground(notificationId, buildNotification("Preparing secure sync…", true))
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                updateNotification("Syncing folder pairs…", true)
+                updateNotification("Synchronising assigned endpoints…", true)
                 val result = SyncEngine(this@MirrorForegroundService).syncAllEnabled()
                 val summary =
-                    "Done — ↑${result.uploaded}  ↓${result.downloaded}  del ${result.deleted}  fail ${result.failed}"
+                    "Complete — ↑${result.uploaded} ↓${result.downloaded} !${result.conflicts} ✗${result.failed}"
                 updateNotification(summary, false)
             } catch (e: Exception) {
-                updateNotification("Sync failed: ${e.message?.take(50) ?: "error"}", false)
+                updateNotification("Sync failed: ${e.message?.take(70) ?: "error"}", false)
             } finally {
                 delay(5000)
                 stopSelf()
@@ -47,25 +47,27 @@ class MirrorForegroundService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
-                "FTP Sync",
+                "STONE//SYNC operations",
                 NotificationManager.IMPORTANCE_DEFAULT
             )
-            channel.description = "Folder pair sync progress"
+            channel.description = "Background data synchronisation status"
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
     }
 
     private fun tapIntent(): PendingIntent {
-        val i = Intent(this, PinActivity::class.java)
+        val intent = Intent(this, PinActivity::class.java)
         return PendingIntent.getActivity(
-            this, 0, i,
+            this,
+            0,
+            intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }
 
     private fun buildNotification(text: String, ongoing: Boolean): Notification {
         return NotificationCompat.Builder(this, channelId)
-            .setContentTitle("FTP Mirror")
+            .setContentTitle("STONE//SYNC")
             .setContentText(text)
             .setSmallIcon(android.R.drawable.stat_sys_upload)
             .setOngoing(ongoing)
