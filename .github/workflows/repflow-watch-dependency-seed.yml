@@ -28,6 +28,21 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Set up Gradle 8.14.3
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
+
+      - name: Ensure Android SDK 36
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          if [[ ! -x "$SDKMANAGER" ]]; then SDKMANAGER="$(command -v sdkmanager)"; fi
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+          test -f "${ANDROID_HOME}/platforms/android-36/android.jar"
+
       - name: Resolve exact Capacitor 8.5.0 npm closure
         shell: bash
         run: |
@@ -52,75 +67,120 @@ jobs:
           tar -czf "$RUNNER_TEMP/repflow-capacitor-node-modules.tgz" node_modules package.json package-lock.json npm-tree.txt
           sha256sum "$RUNNER_TEMP/repflow-capacitor-node-modules.tgz" | tee "$RUNNER_TEMP/repflow-capacitor-node-modules.tgz.sha256"
 
-      - name: Resolve exact RepFlow Android Maven closure into portable local repository
+      - name: Resolve exact RepFlow Android dependency graph in Android plugin context
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/repflow-maven-seed"
-          cd "$RUNNER_TEMP/repflow-maven-seed"
-          cat > pom.xml <<'XML'
-          <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-            <modelVersion>4.0.0</modelVersion>
-            <groupId>net.nexarenew.repflow</groupId>
-            <artifactId>public-dependency-seed</artifactId>
-            <version>1.0.0</version>
-            <repositories>
-              <repository><id>google</id><url>https://dl.google.com/dl/android/maven2/</url></repository>
-              <repository><id>central</id><url>https://repo.maven.apache.org/maven2/</url></repository>
-              <repository><id>gradle-plugins</id><url>https://plugins.gradle.org/m2/</url></repository>
-            </repositories>
-            <dependencies>
-              <dependency><groupId>com.android.tools.build</groupId><artifactId>gradle</artifactId><version>8.13.0</version></dependency>
-              <dependency><groupId>org.jetbrains.kotlin</groupId><artifactId>kotlin-gradle-plugin</artifactId><version>2.3.21</version></dependency>
-              <dependency><groupId>org.jetbrains.kotlin.plugin.compose</groupId><artifactId>org.jetbrains.kotlin.plugin.compose.gradle.plugin</artifactId><version>2.3.21</version><type>pom</type></dependency>
-              <dependency><groupId>com.google.gms</groupId><artifactId>google-services</artifactId><version>4.4.4</version></dependency>
+          SEED="$RUNNER_TEMP/repflow-gradle-seed"
+          mkdir -p "$SEED/phone/src/main" "$SEED/wear/src/main"
+          cd "$SEED"
 
-              <dependency><groupId>com.google.android.gms</groupId><artifactId>play-services-wearable</artifactId><version>20.0.1</version><type>aar</type></dependency>
-              <dependency><groupId>androidx.appcompat</groupId><artifactId>appcompat</artifactId><version>1.7.1</version><type>aar</type></dependency>
-              <dependency><groupId>androidx.coordinatorlayout</groupId><artifactId>coordinatorlayout</artifactId><version>1.3.0</version><type>aar</type></dependency>
-              <dependency><groupId>androidx.core</groupId><artifactId>core-splashscreen</artifactId><version>1.2.0</version><type>aar</type></dependency>
-              <dependency><groupId>junit</groupId><artifactId>junit</artifactId><version>4.13.2</version></dependency>
-              <dependency><groupId>androidx.test.ext</groupId><artifactId>junit</artifactId><version>1.3.0</version><type>aar</type></dependency>
-              <dependency><groupId>androidx.test.espresso</groupId><artifactId>espresso-core</artifactId><version>3.7.0</version><type>aar</type></dependency>
+          cat > settings.gradle <<'GRADLE'
+          pluginManagement {
+            repositories { google(); mavenCentral(); gradlePluginPortal() }
+          }
+          dependencyResolutionManagement {
+            repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
+            repositories { google(); mavenCentral() }
+          }
+          rootProject.name = 'repflow-public-dependency-seed'
+          include ':phone', ':wear'
+          GRADLE
 
-              <dependency><groupId>androidx.activity</groupId><artifactId>activity</artifactId><version>1.11.0</version><type>aar</type></dependency>
-              <dependency><groupId>androidx.core</groupId><artifactId>core</artifactId><version>1.17.0</version><type>aar</type></dependency>
-              <dependency><groupId>androidx.fragment</groupId><artifactId>fragment</artifactId><version>1.8.9</version><type>aar</type></dependency>
-              <dependency><groupId>androidx.webkit</groupId><artifactId>webkit</artifactId><version>1.14.0</version><type>aar</type></dependency>
-              <dependency><groupId>org.apache.cordova</groupId><artifactId>framework</artifactId><version>14.0.1</version><type>aar</type></dependency>
+          cat > build.gradle <<'GRADLE'
+          buildscript {
+            repositories { google(); mavenCentral(); gradlePluginPortal() }
+            dependencies {
+              classpath 'com.android.tools.build:gradle:8.13.0'
+              classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.21'
+              classpath 'org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin:2.3.21'
+              classpath 'com.google.gms:google-services:4.4.4'
+            }
+          }
+          allprojects { repositories { google(); mavenCentral() } }
+          GRADLE
 
-              <dependency><groupId>androidx.activity</groupId><artifactId>activity-compose</artifactId><version>1.13.0</version><type>aar</type></dependency>
-              <dependency><groupId>androidx.wear.compose</groupId><artifactId>compose-foundation</artifactId><version>1.6.2</version><type>aar</type></dependency>
-              <dependency><groupId>androidx.wear.compose</groupId><artifactId>compose-material</artifactId><version>1.6.2</version><type>aar</type></dependency>
-              <dependency><groupId>androidx.lifecycle</groupId><artifactId>lifecycle-runtime-ktx</artifactId><version>2.10.0</version><type>aar</type></dependency>
-              <dependency><groupId>androidx.core</groupId><artifactId>core-ktx</artifactId><version>1.17.0</version><type>aar</type></dependency>
-              <dependency><groupId>androidx.wear</groupId><artifactId>wear-ongoing</artifactId><version>1.1.0</version><type>aar</type></dependency>
-              <dependency><groupId>androidx.health</groupId><artifactId>health-services-client</artifactId><version>1.1.0-rc02</version><type>aar</type></dependency>
-              <dependency><groupId>androidx.room</groupId><artifactId>room-runtime</artifactId><version>2.8.5</version><type>aar</type></dependency>
-              <dependency><groupId>androidx.room</groupId><artifactId>room-ktx</artifactId><version>2.8.5</version><type>aar</type></dependency>
-              <dependency><groupId>androidx.room</groupId><artifactId>room-compiler</artifactId><version>2.8.5</version></dependency>
-              <dependency><groupId>org.jetbrains.kotlinx</groupId><artifactId>kotlinx-coroutines-android</artifactId><version>1.10.2</version></dependency>
-              <dependency><groupId>org.jetbrains.kotlinx</groupId><artifactId>kotlinx-coroutines-play-services</artifactId><version>1.10.2</version></dependency>
-            </dependencies>
-          </project>
+          cat > phone/build.gradle <<'GRADLE'
+          apply plugin: 'com.android.application'
+          android {
+            namespace 'net.nexarenew.depseed.phone'
+            compileSdk 36
+            defaultConfig { applicationId 'net.nexarenew.depseed.phone'; minSdk 24; targetSdk 36; versionCode 1; versionName '1' }
+          }
+          dependencies {
+            implementation 'com.google.android.gms:play-services-wearable:20.0.1'
+            implementation 'androidx.activity:activity:1.11.0'
+            implementation 'androidx.appcompat:appcompat:1.7.1'
+            implementation 'androidx.coordinatorlayout:coordinatorlayout:1.3.0'
+            implementation 'androidx.core:core:1.17.0'
+            implementation 'androidx.core:core-splashscreen:1.2.0'
+            implementation 'androidx.fragment:fragment:1.8.9'
+            implementation 'androidx.webkit:webkit:1.14.0'
+            implementation 'org.apache.cordova:framework:14.0.1'
+            testImplementation 'junit:junit:4.13.2'
+            androidTestImplementation 'androidx.test.ext:junit:1.3.0'
+            androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
+          }
+          GRADLE
+
+          cat > wear/build.gradle <<'GRADLE'
+          apply plugin: 'com.android.application'
+          apply plugin: 'org.jetbrains.kotlin.android'
+          apply plugin: 'org.jetbrains.kotlin.kapt'
+          apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+          android {
+            namespace 'net.nexarenew.depseed.wear'
+            compileSdk 36
+            defaultConfig { applicationId 'net.nexarenew.depseed.wear'; minSdk 30; targetSdk 36; versionCode 1; versionName '1' }
+            buildFeatures { compose true }
+            compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+            kotlinOptions { jvmTarget = '17' }
+          }
+          dependencies {
+            implementation 'com.google.android.gms:play-services-wearable:20.0.1'
+            implementation 'androidx.activity:activity-compose:1.13.0'
+            implementation 'androidx.wear.compose:compose-foundation:1.6.2'
+            implementation 'androidx.wear.compose:compose-material:1.6.2'
+            implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.10.0'
+            implementation 'androidx.core:core-ktx:1.17.0'
+            implementation 'androidx.wear:wear-ongoing:1.1.0'
+            implementation 'androidx.health:health-services-client:1.1.0-rc02'
+            implementation 'androidx.room:room-runtime:2.8.5'
+            implementation 'androidx.room:room-ktx:2.8.5'
+            kapt 'androidx.room:room-compiler:2.8.5'
+            implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
+            implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2'
+          }
+          GRADLE
+
+          cat > phone/src/main/AndroidManifest.xml <<'XML'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"><application android:theme="@style/AppTheme"/></manifest>
           XML
-          mvn -B -U -Dmaven.repo.local="$RUNNER_TEMP/repflow-m2" dependency:go-offline | tee "$RUNNER_TEMP/repflow-maven-resolution.txt"
-          test -f "$RUNNER_TEMP/repflow-m2/com/google/android/gms/play-services-wearable/20.0.1/play-services-wearable-20.0.1.aar"
-          test -f "$RUNNER_TEMP/repflow-m2/androidx/room/room-runtime/2.8.5/room-runtime-2.8.5.aar"
-          test -f "$RUNNER_TEMP/repflow-m2/androidx/health/health-services-client/1.1.0-rc02/health-services-client-1.1.0-rc02.aar"
-          test -f "$RUNNER_TEMP/repflow-m2/com/android/tools/build/gradle/8.13.0/gradle-8.13.0.jar"
+          mkdir -p phone/src/main/res/values
+          cat > phone/src/main/res/values/styles.xml <<'XML'
+          <resources><style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar"/></resources>
+          XML
 
-      - name: Package portable dependency repository
+          cat > wear/src/main/AndroidManifest.xml <<'XML'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-feature android:name="android.hardware.type.watch"/><application android:theme="@android:style/Theme.DeviceDefault"/></manifest>
+          XML
+
+          gradle --no-daemon --stacktrace :phone:assembleDebug :wear:assembleDebug | tee "$RUNNER_TEMP/repflow-gradle-seed-build.txt"
+          test -f phone/build/outputs/apk/debug/phone-debug.apk
+          test -f wear/build/outputs/apk/debug/wear-debug.apk
+
+      - name: Package dependency-only caches
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/repflow-cache-bundle"
-          cp "$RUNNER_TEMP/repflow-maven-resolution.txt" "$RUNNER_TEMP/repflow-cache-bundle/"
-          cp "$RUNNER_TEMP/repflow-capacitor-node-modules.tgz" "$RUNNER_TEMP/repflow-cache-bundle/"
-          cp "$RUNNER_TEMP/repflow-capacitor-node-modules.tgz.sha256" "$RUNNER_TEMP/repflow-cache-bundle/"
-          tar -C "$RUNNER_TEMP" -czf "$RUNNER_TEMP/repflow-cache-bundle/repflow-m2.tgz" repflow-m2
-          sha256sum "$RUNNER_TEMP/repflow-cache-bundle/repflow-m2.tgz" | tee "$RUNNER_TEMP/repflow-cache-bundle/repflow-m2.tgz.sha256"
-          find "$RUNNER_TEMP/repflow-cache-bundle" -maxdepth 1 -type f -printf '%f %s bytes\n' | sort | tee "$RUNNER_TEMP/repflow-cache-bundle/CONTENTS.txt"
+          OUT="$RUNNER_TEMP/repflow-cache-bundle"
+          mkdir -p "$OUT"
+          cp "$RUNNER_TEMP/repflow-gradle-seed-build.txt" "$OUT/"
+          cp "$RUNNER_TEMP/repflow-capacitor-node-modules.tgz" "$OUT/"
+          cp "$RUNNER_TEMP/repflow-capacitor-node-modules.tgz.sha256" "$OUT/"
+          tar -C "$HOME/.gradle/caches" -czf "$OUT/gradle-modules2.tgz" modules-2
+          sha256sum "$OUT/gradle-modules2.tgz" | tee "$OUT/gradle-modules2.tgz.sha256"
+          find "$OUT" -maxdepth 1 -type f -printf '%f %s bytes\n' | sort | tee "$OUT/CONTENTS.txt"
 
       - name: Upload dependency-only cache bundle
         uses: actions/upload-artifact@v4
