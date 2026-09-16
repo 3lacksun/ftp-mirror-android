@@ -1,0 +1,40 @@
+name: RepFlow SDK 35 Seeder
+
+on:
+  push:
+    branches:
+      - repflow-watch-dependency-seed-20260916g
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seed-sdk35:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Android Build Tools 35.0.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          if [[ ! -x "$SDKMANAGER" ]]; then SDKMANAGER="$(command -v sdkmanager)"; fi
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" "build-tools;35.0.0"
+          test -x "${ANDROID_HOME}/build-tools/35.0.0/aapt2"
+          tar -C "${ANDROID_HOME}/build-tools" -czf "$RUNNER_TEMP/android-build-tools-35.0.0.tgz" 35.0.0
+          sha256sum "$RUNNER_TEMP/android-build-tools-35.0.0.tgz" > "$RUNNER_TEMP/android-build-tools-35.0.0.tgz.sha256"
+
+      - name: Upload SDK 35 bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: repflow-android-build-tools-35.0.0
+          path: |
+            ${{ runner.temp }}/android-build-tools-35.0.0.tgz
+            ${{ runner.temp }}/android-build-tools-35.0.0.tgz.sha256
+          if-no-files-found: error
+          retention-days: 7
