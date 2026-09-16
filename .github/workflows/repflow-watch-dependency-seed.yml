@@ -74,7 +74,7 @@ jobs:
           SEED="$RUNNER_TEMP/repflow-gradle-seed"
           mkdir -p "$SEED/phone/src/main" "$SEED/wear/src/main"
           cd "$SEED"
-          printf 'android.useAndroidX=true\nandroid.enableJetifier=true\n' > gradle.properties
+          printf 'android.useAndroidX=true\nandroid.enableJetifier=true\norg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g\norg.gradle.workers.max=2\n' > gradle.properties
 
           cat > settings.gradle <<'GRADLE'
           pluginManagement {
