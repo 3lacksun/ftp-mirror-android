@@ -1,0 +1,83 @@
+name: Build Lower Training 1.1.0
+on:
+  push:
+    branches:
+      - tmp/lower-training-app-dev-24092026
+    paths:
+      - lower-training/**
+      - .github/workflows/build-lower-training.yml
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Verify Android SDK
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -d "$ANDROID_SDK_ROOT/platforms/android-36"
+          test -d "$ANDROID_SDK_ROOT/build-tools/36.0.0"
+
+      - name: Download Gradle 8.13
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -fL --retry 5 -o /tmp/gradle.zip https://services.gradle.org/distributions/gradle-8.13-bin.zip
+          unzip -q /tmp/gradle.zip -d /tmp
+
+      - name: Compile debug APK
+        shell: bash
+        run: |
+          set -euxo pipefail
+          /tmp/gradle-8.13/bin/gradle -p lower-training --no-daemon --stacktrace :app:assembleDebug
+
+      - name: Verify APK identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          APK=lower-training/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          AAPT="$ANDROID_SDK_ROOT/build-tools/36.0.0/aapt"
+          "$AAPT" dump badging "$APK" | tee lower-training/APK_BADGING.txt
+          grep -q "package: name='com.lowertraining.app'" lower-training/APK_BADGING.txt
+          grep -q "versionCode='2'" lower-training/APK_BADGING.txt
+          grep -q "versionName='1.1.0'" lower-training/APK_BADGING.txt
+          sha256sum "$APK" | tee lower-training/APK_SHA256.txt
+
+      - name: Package source
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf lower-training/app/build lower-training/.gradle lower-training/build
+          zip -qr LOWER_TRAINING_KOTLIN_V1_1_0_24092026.zip lower-training
+          sha256sum LOWER_TRAINING_KOTLIN_V1_1_0_24092026.zip > LOWER_TRAINING_KOTLIN_V1_1_0_24092026.zip.sha256
+          cp lower-training/app/build/outputs/apk/debug/app-debug.apk LOWER_TRAINING_V1_1_0_DEBUG_24092026.apk 2>/dev/null || true
+
+      - name: Rebuild APK after source packaging cleanup
+        shell: bash
+        run: |
+          set -euxo pipefail
+          /tmp/gradle-8.13/bin/gradle -p lower-training --no-daemon :app:assembleDebug
+          cp lower-training/app/build/outputs/apk/debug/app-debug.apk LOWER_TRAINING_V1_1_0_DEBUG_24092026.apk
+          sha256sum LOWER_TRAINING_V1_1_0_DEBUG_24092026.apk > LOWER_TRAINING_V1_1_0_DEBUG_24092026.apk.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lower-training-v1-1-0
+          path: |
+            LOWER_TRAINING_KOTLIN_V1_1_0_24092026.zip
+            LOWER_TRAINING_KOTLIN_V1_1_0_24092026.zip.sha256
+            LOWER_TRAINING_V1_1_0_DEBUG_24092026.apk
+            LOWER_TRAINING_V1_1_0_DEBUG_24092026.apk.sha256
+            lower-training/APK_BADGING.txt
+            lower-training/APK_SHA256.txt
+          compression-level: 0
+          retention-days: 7
