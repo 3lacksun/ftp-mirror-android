@@ -26,18 +26,31 @@ jobs:
           test -d "$ANDROID_SDK_ROOT/platforms/android-36"
           test -d "$ANDROID_SDK_ROOT/build-tools/36.0.0"
 
-      - name: Download Gradle 8.13
-        shell: bash
-        run: |
-          set -euxo pipefail
-          curl -fL --retry 5 -o /tmp/gradle.zip https://services.gradle.org/distributions/gradle-8.13-bin.zip
-          unzip -q /tmp/gradle.zip -d /tmp
+      - name: Download verified offline dependency cache
+        uses: actions/download-artifact@v4
+        with:
+          name: lower-training-exact-offline-deps-24092026
+          run-id: 36022642522
+          github-token: ${{ github.token }}
+          path: /tmp/dependency-artifact
 
-      - name: Compile debug APK
+      - name: Prepare verified Gradle cache
         shell: bash
         run: |
           set -euxo pipefail
-          /tmp/gradle-8.13/bin/gradle -p lower-training --no-daemon --stacktrace :app:assembleDebug
+          mkdir -p /tmp/lower-cache
+          cd /tmp/dependency-artifact
+          sha256sum -c LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.sha256
+          tar -xzf LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz -C /tmp/lower-cache
+          unzip -q /tmp/lower-cache/gradle-8.13-bin.zip -d /tmp
+          test -d /tmp/lower-cache/gradle-user-home
+
+      - name: Compile debug APK offline
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export GRADLE_USER_HOME=/tmp/lower-cache/gradle-user-home
+          /tmp/gradle-8.13/bin/gradle -p lower-training --offline --no-daemon --stacktrace :app:assembleDebug
 
       - name: Verify APK identity
         shell: bash
@@ -65,7 +78,8 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          /tmp/gradle-8.13/bin/gradle -p lower-training --no-daemon :app:assembleDebug
+          export GRADLE_USER_HOME=/tmp/lower-cache/gradle-user-home
+          /tmp/gradle-8.13/bin/gradle -p lower-training --offline --no-daemon :app:assembleDebug
           cp lower-training/app/build/outputs/apk/debug/app-debug.apk LOWER_TRAINING_V1_1_0_DEBUG_24092026.apk
           sha256sum LOWER_TRAINING_V1_1_0_DEBUG_24092026.apk > LOWER_TRAINING_V1_1_0_DEBUG_24092026.apk.sha256
 
