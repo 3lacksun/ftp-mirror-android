@@ -102,6 +102,9 @@ jobs:
           }
           EOF
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Install Android API 36
         shell: bash
         run: |
