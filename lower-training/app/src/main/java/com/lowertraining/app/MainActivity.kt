@@ -735,7 +735,7 @@ private fun SetScreen(vm: TrainingViewModel) {
                 value = vm.repsText,
                 onValueChange = {
                     vm.repsText = it.filter(Char::isDigit).take(3)
-                    vm.validationMessage = null
+
                 },
                 modifier = Modifier
                     .weight(1f)
@@ -787,7 +787,7 @@ private fun SetScreen(vm: TrainingViewModel) {
 
 @Composable
 private fun RestScreen(vm: TrainingViewModel) {
-    var showExit by mutableStateOf(false)
+    var showExit by remember { mutableStateOf(false) }
     BackHandler { showExit = true }
 
     if (showExit) {
