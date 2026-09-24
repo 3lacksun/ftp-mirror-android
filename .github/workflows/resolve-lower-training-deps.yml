@@ -26,6 +26,11 @@ jobs:
           rootProject.name = "LowerPremiumDependencyResolver"
           include(":app")
           EOF
+          cat > project/gradle.properties <<'EOF'
+          android.useAndroidX=true
+          org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8
+          kotlin.code.style=official
+          EOF
           cat > project/build.gradle.kts <<'EOF'
           plugins {
               id("com.android.application") version "8.11.1" apply false
