@@ -29,7 +29,7 @@ jobs:
           test -f LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz
           test -f LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.sha256
           sha256sum -c LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.sha256
-          split -b 180M -d -a 2 LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.part-
+          split -b 80M -d -a 2 LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.part-
           sha256sum LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.part-* > LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.parts.sha256
           ls -lh LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.part-*
 
@@ -62,6 +62,42 @@ jobs:
         with:
           name: lower-training-deps-part-03
           path: input/LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.part-03
+          compression-level: 0
+          retention-days: 7
+
+
+      - name: Upload part 04
+        uses: actions/upload-artifact@v4
+        with:
+          name: lower-training-deps-part-04
+          path: input/LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.part-04
+          compression-level: 0
+          retention-days: 7
+
+
+      - name: Upload part 05
+        uses: actions/upload-artifact@v4
+        with:
+          name: lower-training-deps-part-05
+          path: input/LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.part-05
+          compression-level: 0
+          retention-days: 7
+
+
+      - name: Upload part 06
+        uses: actions/upload-artifact@v4
+        with:
+          name: lower-training-deps-part-06
+          path: input/LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.part-06
+          compression-level: 0
+          retention-days: 7
+
+
+      - name: Upload part 07
+        uses: actions/upload-artifact@v4
+        with:
+          name: lower-training-deps-part-07
+          path: input/LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.part-07
           compression-level: 0
           retention-days: 7
 
