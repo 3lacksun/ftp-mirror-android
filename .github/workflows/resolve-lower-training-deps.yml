@@ -102,20 +102,14 @@ jobs:
           }
           EOF
 
-      - name: Install Android API 36
+      - name: Verify Android API 36
         shell: bash
         run: |
           set -euxo pipefail
           SDKROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
-          SDKMANAGER="$(find "$SDKROOT" -type f -name sdkmanager -perm -111 2>/dev/null | head -n 1 || true)"
-          if [ -z "$SDKMANAGER" ]; then
-            echo "sdkmanager not found under $SDKROOT" >&2
-            find "$SDKROOT" -maxdepth 4 -type f -name sdkmanager -print || true
-            exit 1
-          fi
-          echo "Using $SDKMANAGER"
-          yes | "$SDKMANAGER" --licenses >/dev/null || true
-          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+          echo "SDKROOT=$SDKROOT"
+          test -d "$SDKROOT/platforms/android-36"
+          test -d "$SDKROOT/build-tools/36.0.0"
 
       - name: Download and verify Gradle 8.13
         shell: bash
