@@ -4,6 +4,8 @@ import android.app.Application
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -78,6 +80,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -121,11 +124,12 @@ import java.util.Locale
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-private enum class Screen { HOME, SET, REST, ANALYTICS, SUMMARY, SETTINGS }
+enum class Screen { HOME, SET, REST, ANALYTICS, SUMMARY, SETTINGS }
 
 class TrainingViewModel(app: Application) : AndroidViewModel(app) {
     private val repository = TrainingRepository(app)
     private val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 55)
+    private val vibrator: Vibrator? = app.getSystemService(Vibrator::class.java)
     private var timerJob: Job? = null
 
     var screen by mutableStateOf(Screen.HOME)
@@ -223,7 +227,10 @@ class TrainingViewModel(app: Application) : AndroidViewModel(app) {
         )
 
         lastPrMessage = if (logged.isPr) "New personal best" else null
-        if (logged.isPr) cue(ToneGenerator.TONE_PROP_ACK, 130)
+        if (logged.isPr) {
+            cue(ToneGenerator.TONE_PROP_ACK, 130)
+            haptic(70)
+        }
 
         val finalSet = targetIndex >= targets.lastIndex
         if (finalSet) {
@@ -257,10 +264,14 @@ class TrainingViewModel(app: Application) : AndroidViewModel(app) {
             while (restRemaining > 0 && screen == Screen.REST) {
                 delay(1000)
                 restRemaining = max(0, restRemaining - 1)
-                if (restRemaining in 1..3) cue(ToneGenerator.TONE_PROP_BEEP, 90)
+                if (restRemaining in 1..3) {
+                    cue(ToneGenerator.TONE_PROP_BEEP, 90)
+                    haptic(28)
+                }
             }
             if (screen == Screen.REST && restRemaining <= 0) {
                 cue(ToneGenerator.TONE_PROP_ACK, 180)
+                haptic(90)
                 advanceAfterRest()
             }
         }
@@ -295,6 +306,7 @@ class TrainingViewModel(app: Application) : AndroidViewModel(app) {
         )
         analytics = repository.analytics()
         cue(ToneGenerator.TONE_PROP_ACK, 220)
+        haptic(120)
         screen = Screen.SUMMARY
     }
 
@@ -329,6 +341,11 @@ class TrainingViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun cue(toneId: Int, durationMs: Int) {
         if (settings.soundEnabled) tone.startTone(toneId, durationMs)
+    }
+
+    private fun haptic(durationMs: Long) {
+        if (!settings.hapticsEnabled) return
+        vibrator?.vibrate(VibrationEffect.createOneShot(durationMs, VibrationEffect.DEFAULT_AMPLITUDE))
     }
 
     override fun onCleared() {
@@ -574,7 +591,7 @@ private fun DarkMetric(label: String, value: String, modifier: Modifier = Modifi
 @Composable
 private fun SetScreen(vm: TrainingViewModel) {
     val target = vm.currentTarget ?: return
-    var showExit by mutableStateOf(false)
+    var showExit by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val repsFocus = FocusRequester()
 
@@ -700,7 +717,6 @@ private fun SetScreen(vm: TrainingViewModel) {
                 value = vm.weightText,
                 onValueChange = {
                     vm.weightText = it.filter { ch -> ch.isDigit() || ch == '.' }.take(7)
-                    vm.validationMessage = null
                 },
                 modifier = Modifier.weight(1f),
                 label = { Text("Weight") },
@@ -1251,7 +1267,7 @@ private fun EmptyState(text: String) {
 @Composable
 private fun SettingsScreen(vm: TrainingViewModel) {
     BackHandler { vm.goHome() }
-    var local by mutableStateOf(vm.settings)
+    var local by remember { mutableStateOf(vm.settings) }
 
     Column(
         modifier = Modifier
