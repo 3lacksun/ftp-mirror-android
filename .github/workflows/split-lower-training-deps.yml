@@ -1,0 +1,76 @@
+name: Split Lower Training Dependency Artifact
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/split-lower-training-deps.yml
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  split:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download verified dependency artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: lower-training-exact-offline-deps-24092026
+          run-id: 36022642522
+          github-token: ${{ github.token }}
+          path: input
+
+      - name: Verify and split bundle
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd input
+          test -f LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz
+          test -f LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.sha256
+          sha256sum -c LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.sha256
+          split -b 180M -d -a 2 LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.part-
+          sha256sum LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.part-* > LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.parts.sha256
+          ls -lh LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.part-*
+
+      - name: Upload part 00
+        uses: actions/upload-artifact@v4
+        with:
+          name: lower-training-deps-part-00
+          path: input/LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.part-00
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload part 01
+        uses: actions/upload-artifact@v4
+        with:
+          name: lower-training-deps-part-01
+          path: input/LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.part-01
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload part 02
+        uses: actions/upload-artifact@v4
+        with:
+          name: lower-training-deps-part-02
+          path: input/LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.part-02
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload part 03
+        uses: actions/upload-artifact@v4
+        with:
+          name: lower-training-deps-part-03
+          path: input/LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.part-03
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: lower-training-deps-checksums
+          path: |
+            input/LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.tar.gz.sha256
+            input/LOWER_TRAINING_ANDROID_EXACT_OFFLINE_DEPS_24092026.parts.sha256
+          compression-level: 0
+          retention-days: 7
